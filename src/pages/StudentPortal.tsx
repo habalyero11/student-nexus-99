@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,36 +7,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import {
     User,
     GraduationCap,
     BookOpen,
     Calendar,
-    ArrowLeft,
     School,
     LogOut,
-    Download
+    Sparkles
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Student {
     id: string;
     first_name: string;
     middle_name?: string;
     last_name: string;
-    birth_place?: string;
-    birth_date?: string;
-    address?: string;
     student_id_no: string;
     student_lrn: string;
     year_level: string;
     section: string;
     strand?: string;
-    age?: number;
-    gender?: string;
-    contact_number?: string;
-    guardian_name?: string;
-    parent_contact_no?: string;
+    must_change_password?: boolean;
 }
 
 interface Grade {
@@ -48,7 +40,6 @@ interface Grade {
     quarterly_assessment?: number;
     final_grade?: number;
     remarks?: string;
-    created_at: string;
 }
 
 interface AttendanceRecord {
@@ -56,79 +47,54 @@ interface AttendanceRecord {
     date: string;
     status: string;
     remarks?: string;
-    created_at: string;
 }
 
+const statusLabel: Record<string, string> = { present: "Present", absent: "Absent", late: "Late", excused: "Excused" };
+
+import { ChangePasswordDialog } from "@/components/student/ChangePasswordDialog";
+
 const StudentPortal = () => {
-    const { studentId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { toast } = useToast();
     const [student, setStudent] = useState<Student | null>(null);
     const [grades, setGrades] = useState<Grade[]>([]);
     const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
     const [loading, setLoading] = useState(true);
-
+    const [changePasswordOpen, setChangePasswordOpen] = useState(false);
     useEffect(() => {
-        if (studentId) {
-            fetchStudentData(studentId);
-        } else {
-            navigate("/");
-        }
-    }, [studentId]);
+        const state = location.state as { student?: Student; grades?: Grade[]; attendance?: AttendanceRecord[] } | null;
 
-    const fetchStudentData = async (idNo: string) => {
-        try {
-            setLoading(true);
-
-            // Fetch student details
-            const { data: studentData, error: studentError } = await supabase
-                .from("students")
-                .select("*")
-                .eq("student_id_no", idNo)
-                .single();
-
-            if (studentError) {
-                throw new Error("Student not found");
-            }
-
-            setStudent(studentData);
-
-            // Fetch grades
-            const { data: gradesData, error: gradesError } = await supabase
-                .from("grades")
-                .select("*")
-                .eq("student_id", studentData.id)
-                .order("quarter", { ascending: true })
-                .order("subject", { ascending: true });
-
-            if (gradesError) throw gradesError;
-            setGrades(gradesData || []);
-
-            // Fetch attendance
-            const { data: attendanceData, error: attendanceError } = await supabase
-                .from("attendance")
-                .select("*")
-                .eq("student_id", studentData.id)
-                .order("date", { ascending: false })
-                .limit(50);
-
-            if (attendanceError) throw attendanceError;
-            setAttendance(attendanceData || []);
-
-        } catch (error: any) {
+        if (!state || !state.student) {
             toast({
                 variant: "destructive",
-                title: "Error",
-                description: error.message || "Failed to load student data",
+                title: "Session expired",
+                description: "Please log in again to view your portal.",
             });
             navigate("/");
-        } finally {
-            setLoading(false);
+            return;
         }
+
+        setStudent(state.student);
+        setGrades(state.grades || []);
+        setAttendance(state.attendance || []);
+
+        if (state.student.must_change_password) {
+            setChangePasswordOpen(true);
+        }
+
+        setLoading(false);
+    }, [location.state, navigate, toast]);
+
+    const handleLogout = async () => {
+        navigate("/");
     };
 
-    const handleLogout = () => {
-        navigate("/");
+    const handlePasswordChanged = () => {
+        setChangePasswordOpen(false);
+        if (student) {
+            setStudent({ ...student, must_change_password: false });
+        }
     };
 
     if (loading) {
@@ -143,7 +109,6 @@ const StudentPortal = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* Header */}
             <header className="bg-white border-b sticky top-0 z-30">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2 font-bold text-xl text-primary">
@@ -160,7 +125,6 @@ const StudentPortal = () => {
 
             <main className="flex-1 container mx-auto px-4 py-8">
                 <div className="max-w-6xl mx-auto space-y-6">
-                    {/* Student Profile Header */}
                     <Card className="border-none shadow-md bg-gradient-to-r from-primary/90 to-primary text-primary-foreground">
                         <CardContent className="p-6">
                             <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
@@ -172,22 +136,10 @@ const StudentPortal = () => {
                                         {student.first_name} {student.middle_name} {student.last_name}
                                     </h1>
                                     <div className="flex flex-wrap gap-3 justify-center md:justify-start text-primary-foreground/90">
-                                        <div className="flex items-center gap-1">
-                                            <Badge variant="outline" className="border-white/40 text-white bg-white/10">
-                                                ID: {student.student_id_no}
-                                            </Badge>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Badge variant="outline" className="border-white/40 text-white bg-white/10">
-                                                Grade {student.year_level} - {student.section}
-                                            </Badge>
-                                        </div>
+                                        <Badge variant="outline" className="border-white/40 text-white bg-white/10">ID: {student.student_id_no}</Badge>
+                                        <Badge variant="outline" className="border-white/40 text-white bg-white/10">Grade {student.year_level} - {student.section}</Badge>
                                         {student.strand && (
-                                            <div className="flex items-center gap-1">
-                                                <Badge variant="outline" className="border-white/40 text-white bg-white/10">
-                                                    {student.strand.toUpperCase()}
-                                                </Badge>
-                                            </div>
+                                            <Badge variant="outline" className="border-white/40 text-white bg-white/10">{student.strand.toUpperCase()}</Badge>
                                         )}
                                     </div>
                                 </div>
@@ -195,7 +147,6 @@ const StudentPortal = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Main Content Tabs */}
                     <Tabs defaultValue="grades" className="w-full">
                         <TabsList className="grid w-full grid-cols-3 lg:w-[600px] mx-auto lg:mx-0 mb-6">
                             <TabsTrigger value="grades" className="flex items-center gap-2">
@@ -212,61 +163,19 @@ const StudentPortal = () => {
                             </TabsTrigger>
                         </TabsList>
 
-                        {/* Grades Tab */}
                         <TabsContent value="grades" className="space-y-6">
-                            {/* Overall Average Summary */}
                             {grades.length > 0 && (() => {
-                                // Calculate quarterly averages
-                                const quarterlyGrades: { [key: string]: number[] } = {
-                                    '1st': [], '2nd': [], '3rd': [], '4th': []
-                                };
-
+                                const q: Record<string, number[]> = { '1st': [], '2nd': [], '3rd': [], '4th': [] };
                                 grades.forEach(grade => {
-                                    const finalGrade = grade.final_grade || (
-                                        ((grade.written_work || 0) * 0.25) +
-                                        ((grade.performance_task || 0) * 0.50) +
-                                        ((grade.quarterly_assessment || 0) * 0.25)
-                                    );
-                                    if (finalGrade > 0 && quarterlyGrades[grade.quarter]) {
-                                        quarterlyGrades[grade.quarter].push(finalGrade);
-                                    }
+                                    const f = grade.final_grade ?? ((grade.written_work || 0) * 0.25 + (grade.performance_task || 0) * 0.5 + (grade.quarterly_assessment || 0) * 0.25);
+                                    if (f > 0 && q[grade.quarter]) q[grade.quarter].push(f);
                                 });
-
-                                const getQuarterAvg = (quarter: string) => {
-                                    const gradesList = quarterlyGrades[quarter];
-                                    if (gradesList.length === 0) return null;
-                                    return gradesList.reduce((a, b) => a + b, 0) / gradesList.length;
-                                };
-
-                                const q1Avg = getQuarterAvg('1st');
-                                const q2Avg = getQuarterAvg('2nd');
-                                const q3Avg = getQuarterAvg('3rd');
-                                const q4Avg = getQuarterAvg('4th');
-
-                                // Calculate overall average from quarterly averages
-                                const validQuarters = [q1Avg, q2Avg, q3Avg, q4Avg].filter(q => q !== null) as number[];
-                                const overallAvg = validQuarters.length > 0
-                                    ? validQuarters.reduce((a, b) => a + b, 0) / validQuarters.length
-                                    : null;
-
-                                const getGradeColor = (grade: number | null) => {
-                                    if (grade === null) return "text-muted-foreground";
-                                    if (grade >= 90) return "text-green-600";
-                                    if (grade >= 85) return "text-blue-600";
-                                    if (grade >= 80) return "text-yellow-600";
-                                    if (grade >= 75) return "text-orange-600";
-                                    return "text-red-600";
-                                };
-
-                                const getGradeBg = (grade: number | null) => {
-                                    if (grade === null) return "bg-muted/30";
-                                    if (grade >= 90) return "bg-green-50";
-                                    if (grade >= 85) return "bg-blue-50";
-                                    if (grade >= 80) return "bg-yellow-50";
-                                    if (grade >= 75) return "bg-orange-50";
-                                    return "bg-red-50";
-                                };
-
+                                const avg = (k: string) => { const g = q[k]; return g.length ? g.reduce((a, b) => a + b, 0) / g.length : null; };
+                                const q1 = avg('1st'), q2 = avg('2nd'), q3 = avg('3rd'), q4 = avg('4th');
+                                const all = [q1, q2, q3, q4].filter(Boolean) as number[];
+                                const overall = all.length ? all.reduce((a, b) => a + b, 0) / all.length : null;
+                                const col = (v: number | null) => v == null ? "text-muted-foreground" : v >= 90 ? "text-green-600" : v >= 85 ? "text-blue-600" : v >= 80 ? "text-yellow-600" : v >= 75 ? "text-orange-600" : "text-red-600";
+                                const bg = (v: number | null) => v == null ? "bg-muted/30" : v >= 90 ? "bg-green-50" : v >= 85 ? "bg-blue-50" : v >= 80 ? "bg-yellow-50" : v >= 75 ? "bg-orange-50" : "bg-red-50";
                                 return (
                                     <Card className="border-none shadow-md bg-gradient-to-r from-primary/5 to-primary/10">
                                         <CardHeader className="pb-2">
@@ -277,40 +186,15 @@ const StudentPortal = () => {
                                         </CardHeader>
                                         <CardContent>
                                             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                                                {/* Q1 Average */}
-                                                <div className={`text-center p-3 rounded-lg ${getGradeBg(q1Avg)}`}>
-                                                    <div className="text-xs text-muted-foreground mb-1">Q1 Average</div>
-                                                    <div className={`text-xl font-bold ${getGradeColor(q1Avg)}`}>
-                                                        {q1Avg !== null ? q1Avg.toFixed(1) : "—"}
+                                                {(['1st', '2nd', '3rd', '4th'] as const).map(qq => (
+                                                    <div key={qq} className={`text-center p-3 rounded-lg ${bg(avg(qq))}`}>
+                                                        <div className="text-xs text-muted-foreground mb-1">Q{qq[0]} Average</div>
+                                                        <div className={`text-xl font-bold ${col(avg(qq))}`}>{avg(qq) != null ? avg(qq)!.toFixed(1) : "—"}</div>
                                                     </div>
-                                                </div>
-                                                {/* Q2 Average */}
-                                                <div className={`text-center p-3 rounded-lg ${getGradeBg(q2Avg)}`}>
-                                                    <div className="text-xs text-muted-foreground mb-1">Q2 Average</div>
-                                                    <div className={`text-xl font-bold ${getGradeColor(q2Avg)}`}>
-                                                        {q2Avg !== null ? q2Avg.toFixed(1) : "—"}
-                                                    </div>
-                                                </div>
-                                                {/* Q3 Average */}
-                                                <div className={`text-center p-3 rounded-lg ${getGradeBg(q3Avg)}`}>
-                                                    <div className="text-xs text-muted-foreground mb-1">Q3 Average</div>
-                                                    <div className={`text-xl font-bold ${getGradeColor(q3Avg)}`}>
-                                                        {q3Avg !== null ? q3Avg.toFixed(1) : "—"}
-                                                    </div>
-                                                </div>
-                                                {/* Q4 Average */}
-                                                <div className={`text-center p-3 rounded-lg ${getGradeBg(q4Avg)}`}>
-                                                    <div className="text-xs text-muted-foreground mb-1">Q4 Average</div>
-                                                    <div className={`text-xl font-bold ${getGradeColor(q4Avg)}`}>
-                                                        {q4Avg !== null ? q4Avg.toFixed(1) : "—"}
-                                                    </div>
-                                                </div>
-                                                {/* Overall Average */}
-                                                <div className={`text-center p-3 rounded-lg border-2 border-primary/20 ${getGradeBg(overallAvg)}`}>
-                                                    <div className="text-xs text-muted-foreground mb-1 font-medium">Overall Average</div>
-                                                    <div className={`text-2xl font-bold ${getGradeColor(overallAvg)}`}>
-                                                        {overallAvg !== null ? overallAvg.toFixed(1) : "—"}
-                                                    </div>
+                                                ))}
+                                                <div className={`text-center p-3 rounded-lg border-2 border-primary/20 ${bg(overall)}`}>
+                                                    <div className="text-xs text-muted-foreground mb-1 font-medium">Overall</div>
+                                                    <div className={`text-2xl font-bold ${col(overall)}`}>{overall != null ? overall.toFixed(1) : "—"}</div>
                                                 </div>
                                             </div>
                                         </CardContent>
@@ -324,9 +208,7 @@ const StudentPortal = () => {
                                         <BookOpen className="h-5 w-5 text-primary" />
                                         Academic Performance
                                     </CardTitle>
-                                    <CardDescription>
-                                        Your recorded grades for the current academic year
-                                    </CardDescription>
+                                    <CardDescription>Your recorded grades for the current academic year</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     {grades.length === 0 ? (
@@ -350,27 +232,31 @@ const StudentPortal = () => {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {grades.map((grade) => {
-                                                        const finalGrade = grade.final_grade || (
-                                                            ((grade.written_work || 0) * 0.25) +
-                                                            ((grade.performance_task || 0) * 0.50) +
-                                                            ((grade.quarterly_assessment || 0) * 0.25)
-                                                        );
-
+                                                        const f = grade.final_grade ?? ((grade.written_work || 0) * 0.25 + (grade.performance_task || 0) * 0.5 + (grade.quarterly_assessment || 0) * 0.25);
                                                         return (
                                                             <TableRow key={grade.id}>
                                                                 <TableCell className="font-medium">{grade.subject}</TableCell>
                                                                 <TableCell>{grade.quarter}</TableCell>
-                                                                <TableCell className="text-center">{grade.written_work || "-"}</TableCell>
-                                                                <TableCell className="text-center">{grade.performance_task || "-"}</TableCell>
-                                                                <TableCell className="text-center">{grade.quarterly_assessment || "-"}</TableCell>
-                                                                <TableCell className="text-center font-bold text-primary">
-                                                                    {finalGrade ? finalGrade.toFixed(2) : "-"}
-                                                                </TableCell>
-                                                                <TableCell>
+                                                                <TableCell className="text-center">{grade.written_work ?? "-"}</TableCell>
+                                                                <TableCell className="text-center">{grade.performance_task ?? "-"}</TableCell>
+                                                                <TableCell className="text-center">{grade.quarterly_assessment ?? "-"}</TableCell>
+                                                                <TableCell className="text-center font-bold text-primary">{f ? f.toFixed(2) : "-"}</TableCell>
+                                                                <TableCell className="max-w-[200px]">
                                                                     {grade.remarks ? (
-                                                                        <Badge variant={grade.remarks === "Passed" ? "default" : "destructive"}>
-                                                                            {grade.remarks}
-                                                                        </Badge>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <div className="flex items-start gap-1 cursor-pointer">
+                                                                                    <Sparkles className="h-3 w-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                                                                                    <span className="text-xs text-muted-foreground line-clamp-2">{grade.remarks}</span>
+                                                                                </div>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent side="left" className="max-w-[300px] p-3">
+                                                                                <div className="space-y-1">
+                                                                                    <div className="flex items-center gap-1 text-purple-600 font-medium text-xs"><Sparkles className="h-3 w-3" /> AI-Generated Feedback</div>
+                                                                                    <p className="text-sm">{grade.remarks}</p>
+                                                                                </div>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
                                                                     ) : "-"}
                                                                 </TableCell>
                                                             </TableRow>
@@ -384,7 +270,6 @@ const StudentPortal = () => {
                             </Card>
                         </TabsContent>
 
-                        {/* Attendance Tab */}
                         <TabsContent value="attendance" className="space-y-6">
                             <Card className="border-none shadow-md">
                                 <CardHeader>
@@ -392,9 +277,7 @@ const StudentPortal = () => {
                                         <Calendar className="h-5 w-5 text-primary" />
                                         Attendance Record
                                     </CardTitle>
-                                    <CardDescription>
-                                        Your recent attendance history
-                                    </CardDescription>
+                                    <CardDescription>Your recent attendance history</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     {attendance.length === 0 ? (
@@ -416,24 +299,19 @@ const StudentPortal = () => {
                                                     {attendance.map((record) => (
                                                         <TableRow key={record.id}>
                                                             <TableCell className="font-medium">
-                                                                {new Date(record.date).toLocaleDateString(undefined, {
-                                                                    weekday: 'long',
-                                                                    year: 'numeric',
-                                                                    month: 'long',
-                                                                    day: 'numeric'
-                                                                })}
+                                                                {new Date(record.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Badge
                                                                     variant="outline"
                                                                     className={
-                                                                        record.status === "Present" ? "bg-green-50 text-green-700 border-green-200" :
-                                                                            record.status === "Absent" ? "bg-red-50 text-red-700 border-red-200" :
-                                                                                record.status === "Late" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                                                                        record.status === "present" ? "bg-green-50 text-green-700 border-green-200" :
+                                                                            record.status === "absent" ? "bg-red-50 text-red-700 border-red-200" :
+                                                                                record.status === "late" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
                                                                                     "bg-gray-50 text-gray-700 border-gray-200"
                                                                     }
                                                                 >
-                                                                    {record.status}
+                                                                    {statusLabel[record.status] ?? record.status}
                                                                 </Badge>
                                                             </TableCell>
                                                             <TableCell>{record.remarks || "-"}</TableCell>
@@ -447,7 +325,6 @@ const StudentPortal = () => {
                             </Card>
                         </TabsContent>
 
-                        {/* Personal Info Tab */}
                         <TabsContent value="personal" className="space-y-6">
                             <Card className="border-none shadow-md">
                                 <CardHeader>
@@ -460,53 +337,40 @@ const StudentPortal = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                                         <div className="space-y-1">
                                             <h4 className="text-sm font-medium text-muted-foreground">Full Name</h4>
-                                            <p className="text-base font-medium">
-                                                {student.first_name} {student.middle_name} {student.last_name}
-                                            </p>
+                                            <p className="text-base font-medium">{student.first_name} {student.middle_name} {student.last_name}</p>
                                         </div>
-
                                         <div className="space-y-1">
-                                            <h4 className="text-sm font-medium text-muted-foreground">Learner Reference Number (LRN)</h4>
+                                            <h4 className="text-sm font-medium text-muted-foreground">LRN</h4>
                                             <p className="text-base">{student.student_lrn}</p>
                                         </div>
-
                                         <div className="space-y-1">
                                             <h4 className="text-sm font-medium text-muted-foreground">Birth Date</h4>
-                                            <p className="text-base">
-                                                {student.birth_date ? new Date(student.birth_date).toLocaleDateString() : "Not provided"}
-                                            </p>
+                                            <p className="text-base">{(student as any).birth_date ? new Date((student as any).birth_date).toLocaleDateString() : "Not provided"}</p>
                                         </div>
-
                                         <div className="space-y-1">
                                             <h4 className="text-sm font-medium text-muted-foreground">Age</h4>
-                                            <p className="text-base">{student.age ? `${student.age} years old` : "Not provided"}</p>
+                                            <p className="text-base">{(student as any).age ? `${(student as any).age} years old` : "Not provided"}</p>
                                         </div>
-
                                         <div className="space-y-1">
                                             <h4 className="text-sm font-medium text-muted-foreground">Gender</h4>
-                                            <p className="text-base capitalize">{student.gender || "Not provided"}</p>
+                                            <p className="text-base capitalize">{(student as any).gender || "Not provided"}</p>
                                         </div>
-
                                         <div className="space-y-1">
-                                            <h4 className="text-sm font-medium text-muted-foreground">Contact Number</h4>
-                                            <p className="text-base">{student.contact_number || "Not provided"}</p>
+                                            <h4 className="text-sm font-medium text-muted-foreground">Contact</h4>
+                                            <p className="text-base">{(student as any).contact_number || "Not provided"}</p>
                                         </div>
-
                                         <div className="space-y-1 md:col-span-2">
                                             <h4 className="text-sm font-medium text-muted-foreground">Address</h4>
-                                            <p className="text-base">{student.address || "Not provided"}</p>
+                                            <p className="text-base">{(student as any).address || "Not provided"}</p>
                                         </div>
-
                                         <Separator className="md:col-span-2 my-2" />
-
                                         <div className="space-y-1">
-                                            <h4 className="text-sm font-medium text-muted-foreground">Guardian Name</h4>
-                                            <p className="text-base">{student.guardian_name || "Not provided"}</p>
+                                            <h4 className="text-sm font-medium text-muted-foreground">Guardian</h4>
+                                            <p className="text-base">{(student as any).guardian_name || "Not provided"}</p>
                                         </div>
-
                                         <div className="space-y-1">
                                             <h4 className="text-sm font-medium text-muted-foreground">Guardian Contact</h4>
-                                            <p className="text-base">{student.parent_contact_no || "Not provided"}</p>
+                                            <p className="text-base">{(student as any).parent_contact_no || "Not provided"}</p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -515,6 +379,15 @@ const StudentPortal = () => {
                     </Tabs>
                 </div>
             </main>
+
+            {student && (
+                <ChangePasswordDialog
+                    open={changePasswordOpen}
+                    onSuccess={handlePasswordChanged}
+                    studentId={student.id}
+                    mustChangePassword={student.must_change_password}
+                />
+            )}
         </div>
     );
 };

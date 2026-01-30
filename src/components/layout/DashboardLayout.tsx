@@ -13,29 +13,51 @@ export const DashboardLayout = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        if (!session?.user) {
-          navigate("/auth");
-        }
-      }
-    );
+    let mounted = true;
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      if (!session?.user) {
-        navigate("/auth");
+    const check = async (uid: string) => {
+      try {
+        const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", uid).single();
+        if (profile) return;
+        const { data: student } = await supabase.from("students").select("id").eq("auth_user_id", uid).single();
+        if (student && mounted) navigate("/student-portal", { replace: true });
+      } catch {
+        // ignore RLS or network errors; treat as staff
       }
+    };
+
+    const apply = (session: { user: unknown } | null) => {
+      if (!mounted) return;
+      const u = session?.user ?? null;
+      setUser(u as typeof user);
+      setLoading(false);
+      if (!u) {
+        navigate("/auth", { replace: true });
+      } else {
+        check((u as { id: string }).id);
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      apply(session);
     });
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => apply(session))
+      .catch(() => apply(null))
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    const t = window.setTimeout(() => {
+      if (mounted) setLoading((prev) => (prev ? false : prev));
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(t);
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   if (loading) {

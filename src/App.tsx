@@ -7,7 +7,10 @@ import { DashboardLayout } from "./components/layout/DashboardLayout";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import StudentLogin from "./pages/StudentLogin";
+import StudentForgotPassword from "./pages/StudentForgotPassword";
 import StudentPortal from "./pages/StudentPortal";
+import PasswordResetRequests from "./pages/PasswordResetRequests";
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
 import Advisors from "./pages/Advisors";
@@ -32,7 +35,9 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/student-portal/:studentId" element={<StudentPortal />} />
+          <Route path="/student-login" element={<StudentLogin />} />
+          <Route path="/student/forgot-password" element={<StudentForgotPassword />} />
+          <Route path="/student-portal" element={<StudentPortal />} />
           <Route element={<DashboardLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="students" element={<Students />} />
@@ -41,6 +46,7 @@ const App = () => (
             <Route path="grade-sheet" element={<GradeSheet />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="password-reset-requests" element={<PasswordResetRequests />} />
             <Route path="profile" element={<Profile />} />
           </Route>
           <Route path="*" element={<NotFound />} />

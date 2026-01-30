@@ -9,7 +9,8 @@ import {
   LogOut,
   UserCheck,
   BookOpen,
-  Grid3X3
+  Grid3X3,
+  KeyRound,
 } from "lucide-react";
 import {
   Sidebar,
@@ -82,6 +83,7 @@ export const AppSidebar = () => {
     { title: "Grade Sheet", url: "/grade-sheet", icon: Grid3X3 },
     { title: "Attendance", url: "/attendance", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: Users },
+    { title: "Password Reset", url: "/password-reset-requests", icon: KeyRound },
   ];
 
   const advisorItems = [
@@ -91,6 +93,7 @@ export const AppSidebar = () => {
     { title: "Grade Sheet", url: "/grade-sheet", icon: Grid3X3 },
     { title: "Attendance", url: "/attendance", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: Users },
+    { title: "Password Reset", url: "/password-reset-requests", icon: KeyRound },
   ];
 
   const menuItems = profile?.role === "admin" ? adminItems : advisorItems;

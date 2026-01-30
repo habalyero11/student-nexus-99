@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
-import { Calculator, ChevronLeft, ChevronRight, Save, FileText, X } from "lucide-react";
+import { Calculator, ChevronLeft, ChevronRight, Save, FileText, X, Sparkles } from "lucide-react";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import AutoSaveIndicator from "./AutoSaveIndicator";
 
@@ -387,6 +387,64 @@ const EnhancedGradeForm = ({ grade, students, onSuccess, onCancel, initialStuden
       if (saveType === 'save') {
         clearLocalStorage(); // Clear draft backup after successful save
         clearAutoSave(); // Clear auto-save state
+
+        // Generate AI remarks in the background
+        const selectedStudentData = students.find(s => s.id === formData.student_id);
+        if (selectedStudentData && calculatedGrade > 0) {
+          try {
+            // Import dynamically to avoid heavy bundle if possible, or just standard import
+            const { generateRemarks } = await import('@/lib/analytics');
+
+            const remarks = generateRemarks({
+              studentName: `${selectedStudentData.first_name} ${selectedStudentData.last_name}`,
+              subject: formData.subject,
+              quarter: formData.quarter || '1st',
+              scores: {
+                writtenWork: formData.written_work,
+                performanceTask: formData.performance_task,
+                quarterlyAssessment: formData.quarterly_assessment,
+                finalGrade: calculatedGrade
+              },
+              yearLevel: selectedStudentData.year_level,
+              section: selectedStudentData.section
+            });
+
+            if (remarks) {
+              // Update the grade with rule-based remarks
+              const gradeId = grade?.id;
+              if (gradeId) {
+                await supabase
+                  .from("grades")
+                  .update({ remarks })
+                  .eq("id", gradeId);
+              } else {
+                // For new grades, get the just-created grade
+                const { data: newGrade } = await supabase
+                  .from("grades")
+                  .select("id")
+                  .eq("student_id", formData.student_id)
+                  .eq("subject", formData.subject)
+                  .eq("quarter", formData.quarter)
+                  .single();
+
+                if (newGrade) {
+                  await supabase
+                    .from("grades")
+                    .update({ remarks })
+                    .eq("id", newGrade.id);
+                }
+              }
+
+              toast({
+                title: "Remarks Generated",
+                description: "Personalized feedback has been added to the grade.",
+              });
+            }
+          } catch (error) {
+            console.error("Remarks generation failed:", error);
+          }
+        }
+
         onSuccess();
       }
       // For draft, stay on current form

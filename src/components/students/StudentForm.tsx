@@ -221,9 +221,29 @@ const StudentForm = ({ student, onSuccess, onCancel, userRole, advisorAssignment
           throw error;
         }
 
+        // Create auth account with default password 1234
+        try {
+          const { error: authErr } = await supabase.functions.invoke("create-student-auth", {
+            body: { student_id_no: formData.student_id_no.trim(), password: "1234" },
+          });
+          if (authErr) {
+            toast({
+              variant: "destructive",
+              title: "Student created, account not set",
+              description: "Student was saved but the login account could not be created. You can retry from the Students page or contact support.",
+            });
+          }
+        } catch {
+          toast({
+            variant: "destructive",
+            title: "Student created, account not set",
+            description: "Student was saved but the login account could not be created. You can retry from the Students page.",
+          });
+        }
+
         toast({
           title: "Success",
-          description: "Student created successfully",
+          description: "Student created successfully. Default password is 1234; they will be prompted to change it on first login.",
         });
       }
 

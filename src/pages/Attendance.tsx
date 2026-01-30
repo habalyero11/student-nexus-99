@@ -4,36 +4,53 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, Search, Filter, Users, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Calendar, Search, Filter, Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, CalendarDays, MoreHorizontal, CheckSquare, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type Student = Database["public"]["Tables"]["students"]["Row"];
 type Attendance = Database["public"]["Tables"]["attendance"]["Row"] & {
   students: Student;
 };
 
+// New type for class sessions
+type ClassSession = {
+  id: string;
+  date: string;
+  name: string | null;
+  type: 'regular' | 'special' | 'holiday';
+  year_level: string;
+  section: string;
+};
+
 const Attendance = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [session, setSession] = useState<ClassSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedYearLevel, setSelectedYearLevel] = useState<string>("all");
   const [selectedSection, setSelectedSection] = useState<string>("all");
   const [userRole, setUserRole] = useState<string>("");
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [newSessionName, setNewSessionName] = useState("");
+  const [newSessionType, setNewSessionType] = useState<'regular' | 'special' | 'holiday'>('regular');
+
   const { toast } = useToast();
 
   const attendanceStatuses = [
-    { value: "present", label: "Present", icon: CheckCircle, color: "bg-green-500" },
-    { value: "absent", label: "Absent", icon: XCircle, color: "bg-red-500" },
-    { value: "late", label: "Late", icon: Clock, color: "bg-yellow-500" },
-    { value: "excused", label: "Excused", icon: AlertCircle, color: "bg-blue-500" }
+    { value: "present", label: "Present", icon: CheckCircle, color: "text-green-600 bg-green-50 hover:bg-green-100 border-green-200" },
+    { value: "absent", label: "Absent", icon: XCircle, color: "text-red-600 bg-red-50 hover:bg-red-100 border-red-200" },
+    { value: "late", label: "Late", icon: Clock, color: "text-amber-600 bg-amber-50 hover:bg-amber-100 border-amber-200" },
+    { value: "excused", label: "Excused", icon: AlertCircle, color: "text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200" }
   ];
 
-  // Section mappings
+  // Section mappings (same as before)
   const juniorHighSections = {
     "7": ["Archimedes", "Laplace", "Miletus"],
     "8": ["Herschel", "Linnaeus", "Pythagoras"],
@@ -46,16 +63,24 @@ const Attendance = () => {
     "12": ["Einstein", "Newton", "Aristotle", "Pasteur"],
   };
 
+  /* ... imports ... */
+
+  // ... (inside component)
   useEffect(() => {
     fetchUserProfile();
   }, []);
 
   useEffect(() => {
     if (userRole) {
+      if (selectedYearLevel !== 'all' && selectedSection !== 'all') {
+        fetchSession();
+      } else {
+        setSession(null);
+      }
       fetchStudents();
       fetchAttendance();
     }
-  }, [userRole, selectedDate]);
+  }, [userRole, selectedDate, selectedYearLevel, selectedSection]);
 
   const fetchUserProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -65,7 +90,63 @@ const Attendance = () => {
         .select("role")
         .eq("user_id", user.id)
         .single();
-      setUserRole(data?.role || "");
+      // Normalize role to lowercase to prevent case-sensitivity bugs
+      setUserRole((data?.role || "").toLowerCase());
+    }
+  };
+
+  const fetchSession = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('class_sessions')
+        .select('*')
+        .eq('date', selectedDate)
+        .eq('year_level', selectedYearLevel)
+        .eq('section', selectedSection)
+        .maybeSingle(); // Use maybeSingle to not throw error if not found
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setSession(data);
+    } catch (error) {
+      // Table might not exist yet if migration wasn't run, fail silently
+      console.log('Session fetch skipped or failed');
+    }
+  };
+
+  const createSession = async () => {
+    try {
+      if (selectedYearLevel === 'all' || selectedSection === 'all') {
+        toast({
+          variant: "destructive",
+          title: "Select Class",
+          description: "Please select a specific Year Level and Section first.",
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('class_sessions')
+        .upsert({
+          date: selectedDate,
+          year_level: selectedYearLevel,
+          section: selectedSection,
+          name: newSessionName || (newSessionType === 'regular' ? 'Regular Class' : newSessionType),
+          type: newSessionType
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setSession(data);
+      setIsCreatingSession(false);
+      setNewSessionName("");
+      toast({ title: "Session Created", description: "Class session has been set up." });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create session: " + error.message,
+      });
     }
   };
 
@@ -77,7 +158,7 @@ const Attendance = () => {
         .select("*")
         .order("last_name", { ascending: true });
 
-      // Role-based filtering (same logic as other pages)
+      // Role-based filtering logic (Admin see all, Advisor see assigned)
       if (userRole === "advisor") {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -90,50 +171,44 @@ const Attendance = () => {
           if (profile) {
             const { data: advisor } = await supabase
               .from("advisors")
-              .select(`
-                id,
-                advisor_assignments(year_level, section, strand)
-              `)
+              .select(`id, advisor_assignments(year_level, section, strand)`)
               .eq("profile_id", profile.id)
               .single();
 
             if (advisor?.advisor_assignments && advisor.advisor_assignments.length > 0) {
-              // Filter students based on advisor assignments
               const { data, error } = await query;
               if (error) throw error;
 
               const filteredStudents = data?.filter(student => {
                 return advisor.advisor_assignments.some(assignment => {
-                  const matchesYearLevel = student.year_level === assignment.year_level;
-                  const matchesSection = student.section === assignment.section;
+                  const matchesYearLevel = student.year_level?.trim() === assignment.year_level?.trim();
+                  // Case-insensitive comparison for section
+                  const studentSection = student.section?.trim().toLowerCase() || "";
+                  const assignmentSection = assignment.section?.trim().toLowerCase() || "";
+                  const matchesSection = studentSection === assignmentSection;
 
                   if (assignment.strand) {
-                    const matchesStrand = student.strand === assignment.strand;
-                    return matchesYearLevel && matchesSection && matchesStrand;
-                  } else {
-                    return matchesYearLevel && matchesSection;
+                    return matchesYearLevel && matchesSection && student.strand === assignment.strand;
                   }
+                  return matchesYearLevel && matchesSection;
                 });
               }) || [];
 
               setStudents(filteredStudents);
+              setLoading(false); // Done for advisor path
               return;
             }
           }
         }
       }
 
-      // Admin sees all students
+      // Admin or fallback
       const { data, error } = await query;
       if (error) throw error;
       setStudents(data || []);
 
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch students: " + error.message,
-      });
+      console.error("Error fetching students:", error);
     } finally {
       setLoading(false);
     }
@@ -143,72 +218,42 @@ const Attendance = () => {
     try {
       const { data, error } = await supabase
         .from("attendance")
-        .select(`
-          *,
-          students!attendance_student_id_fkey (
-            id,
-            first_name,
-            middle_name,
-            last_name,
-            student_id_no,
-            year_level,
-            section,
-            strand
-          )
-        `)
+        .select(`*, students!attendance_student_id_fkey (*)`)
         .eq("date", selectedDate);
 
       if (error) throw error;
-
-      // Apply same role-based filtering as students
-      let filteredAttendance = data || [];
-
-      if (userRole === "advisor") {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("user_id", user.id)
-            .single();
-
-          if (profile) {
-            const { data: advisor } = await supabase
-              .from("advisors")
-              .select(`
-                id,
-                advisor_assignments(year_level, section, strand)
-              `)
-              .eq("profile_id", profile.id)
-              .single();
-
-            if (advisor?.advisor_assignments && advisor.advisor_assignments.length > 0) {
-              filteredAttendance = data?.filter(record => {
-                return advisor.advisor_assignments.some(assignment => {
-                  const matchesYearLevel = record.students.year_level === assignment.year_level;
-                  const matchesSection = record.students.section === assignment.section;
-
-                  if (assignment.strand) {
-                    const matchesStrand = record.students.strand === assignment.strand;
-                    return matchesYearLevel && matchesSection && matchesStrand;
-                  } else {
-                    return matchesYearLevel && matchesSection;
-                  }
-                });
-              }) || [];
-            }
-          }
-        }
-      }
-
-      setAttendance(filteredAttendance);
-    } catch (error: any) {
+      setAttendance(data || []);
+    } catch (error) {
       console.error("Error fetching attendance:", error);
     }
   };
 
   const updateAttendance = async (studentId: string, status: string, remarks: string = "") => {
+    // If holiday, prevent marking attendance unless changed to regular
+    if (session?.type === 'holiday') {
+      toast({
+        variant: "destructive",
+        title: "Holiday",
+        description: "Cannot mark attendance on a holiday session.",
+      });
+      return;
+    }
+
     try {
+      // Optimistic update
+      const existingRecord = attendance.find(a => a.student_id === studentId);
+      const newAttendance = [
+        ...attendance.filter(a => a.student_id !== studentId),
+        {
+          ...existingRecord,
+          student_id: studentId,
+          status,
+          remarks: remarks || "",
+          date: selectedDate
+        } as any
+      ];
+      setAttendance(newAttendance);
+
       const { error } = await supabase
         .from("attendance")
         .upsert({
@@ -222,18 +267,38 @@ const Attendance = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Attendance updated successfully",
-      });
-
-      fetchAttendance();
+      // Don't toast on every click, it's too spammy for attendance taking
+      // toast({ title: "Saved", duration: 1000 }); 
     } catch (error: any) {
+      fetchAttendance(); // Revert on error
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update attendance: " + error.message,
+        description: "Failed to update: " + error.message,
       });
+    }
+  };
+
+  const markAll = async (status: string) => {
+    if (session?.type === 'holiday') return;
+
+    try {
+      const updates = filteredStudents.map(s => ({
+        student_id: s.id,
+        date: selectedDate,
+        status: status
+      }));
+
+      const { error } = await supabase
+        .from('attendance')
+        .upsert(updates, { onConflict: 'student_id,date' });
+
+      if (error) throw error;
+
+      toast({ title: "Updated All", description: `Marked all displayed students as ${status}` });
+      fetchAttendance();
+    } catch (error: any) {
+      toast({ variant: "destructive", description: error.message });
     }
   };
 
@@ -250,6 +315,7 @@ const Attendance = () => {
     return [];
   };
 
+  // Filter students based on selection
   const filteredStudents = students.filter((student) => {
     const studentName = `${student.first_name} ${student.middle_name || ""} ${student.last_name}`.toLowerCase();
     const studentId = student.student_id_no.toLowerCase();
@@ -259,242 +325,247 @@ const Attendance = () => {
       studentId.includes(searchTerm.toLowerCase());
 
     const matchesYearLevel = selectedYearLevel === "all" || student.year_level === selectedYearLevel;
-    const matchesSection = selectedSection === "all" || student.section === selectedSection;
+
+    // Case-insensitive check for section
+    const studentSection = student.section?.trim().toLowerCase() || "";
+    const targetSection = selectedSection?.trim().toLowerCase() || "";
+
+    const matchesSection = selectedSection === "all" || studentSection === targetSection;
 
     return matchesSearch && matchesYearLevel && matchesSection;
   });
 
-  // Calculate attendance statistics
-  const attendanceStats = {
+  // Calculate stats for current view
+  const stats = {
     total: filteredStudents.length,
-    present: attendance.filter(record => record.status === "present").length,
-    absent: attendance.filter(record => record.status === "absent").length,
-    late: attendance.filter(record => record.status === "late").length,
-    excused: attendance.filter(record => record.status === "excused").length,
+    present: filteredStudents.filter(s => getAttendanceForStudent(s.id)?.status === 'present').length,
+    absent: filteredStudents.filter(s => getAttendanceForStudent(s.id)?.status === 'absent').length,
+    late: filteredStudents.filter(s => getAttendanceForStudent(s.id)?.status === 'late').length,
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-10 bg-gray-200 rounded mb-4"></div>
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-20 bg-gray-200 rounded"></div>
-            ))}
-          </div>
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Attendance</h1>
+          <p className="text-muted-foreground">Manage daily class attendance records</p>
+        </div>
+
+        {/* Date Picker */}
+        <div className="flex items-center gap-2 bg-card p-2 rounded-lg border shadow-sm">
+          <CalendarDays className="h-5 w-5 text-primary" />
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="border-none shadow-none focus-visible:ring-0 w-[140px] font-medium"
+          />
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Attendance Management</h1>
-        <p className="text-muted-foreground">Track and manage student attendance records</p>
-      </div>
-
-      {/* Attendance Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <div className="text-2xl font-bold">{attendanceStats.total}</div>
-                <div className="text-sm text-muted-foreground">Total Students</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {attendanceStatuses.map((status) => (
-          <Card key={status.value} className="shadow-soft">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <status.icon className={`h-5 w-5 text-white p-1 rounded ${status.color}`} />
-                <div>
-                  <div className="text-2xl font-bold">
-                    {attendanceStats[status.value as keyof typeof attendanceStats]}
-                  </div>
-                  <div className="text-sm text-muted-foreground">{status.label}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Date Selection and Filters */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters & Date Selection
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4 flex-wrap items-center">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-auto"
-              />
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
+      {/* Main Control Bar */}
+      <Card className="shadow-sm border-none bg-card/50">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+              <div className="relative w-full sm:w-[240px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by student name or ID..."
+                  placeholder="Search student..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 bg-background"
                 />
               </div>
+
+              <Select value={selectedYearLevel} onValueChange={setSelectedYearLevel}>
+                <SelectTrigger className="w-[140px] bg-background">
+                  <SelectValue placeholder="Year Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Levels</SelectItem>
+                  {["7", "8", "9", "10", "11", "12"].map(y => (
+                    <SelectItem key={y} value={y}>Grade {y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedSection} onValueChange={setSelectedSection}>
+                <SelectTrigger className="w-[160px] bg-background">
+                  <SelectValue placeholder="Section" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sections</SelectItem>
+                  {selectedYearLevel !== "all" && getSectionsByYearLevel(selectedYearLevel).map((section) => (
+                    <SelectItem key={section} value={section}>{section}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <Select value={selectedYearLevel} onValueChange={setSelectedYearLevel}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Year Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Year Levels</SelectItem>
-                <SelectItem value="7">Grade 7</SelectItem>
-                <SelectItem value="8">Grade 8</SelectItem>
-                <SelectItem value="9">Grade 9</SelectItem>
-                <SelectItem value="10">Grade 10</SelectItem>
-                <SelectItem value="11">Grade 11</SelectItem>
-                <SelectItem value="12">Grade 12</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedSection} onValueChange={setSelectedSection}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Section" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sections</SelectItem>
-                {selectedYearLevel !== "all" && getSectionsByYearLevel(selectedYearLevel).map((section) => (
-                  <SelectItem key={section} value={section}>{section}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Session Actions */}
+            {selectedYearLevel !== 'all' && selectedSection !== 'all' && (
+              <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+                {session ? (
+                  <div className="flex items-center gap-3 bg-primary/5 px-4 py-2 rounded-md border border-primary/10">
+                    <div className="text-sm">
+                      <span className="font-semibold text-primary block">{session.name || "Regular Class"}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{session.type} Session</span>
+                    </div>
+                    {session.type !== 'holiday' && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10">
+                            <MoreHorizontal className="h-4 w-4 text-primary" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => markAll('present')}>
+                            <CheckSquare className="mr-2 h-4 w-4" /> Mark All Present
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => markAll('absent')}>
+                            <XCircle className="mr-2 h-4 w-4" /> Mark All Absent
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                ) : (
+                  <Dialog open={isCreatingSession} onOpenChange={setIsCreatingSession}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2">
+                        <Plus className="h-4 w-4" /> Create Session
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Start Class Session</DialogTitle>
+                        <DialogDescription>
+                          Create a session for {selectedYearLevel} - {selectedSection} on {selectedDate}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Session Type</Label>
+                          <Select value={newSessionType} onValueChange={(v: any) => setNewSessionType(v)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="regular">Regular Class</SelectItem>
+                              <SelectItem value="special">Special Activity</SelectItem>
+                              <SelectItem value="holiday">No Class / Holiday</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Session Name (Optional)</Label>
+                          <Input
+                            value={newSessionName}
+                            onChange={(e) => setNewSessionName(e.target.value)}
+                            placeholder={newSessionType === 'regular' ? "e.g. Science Period 1" : "e.g. Intramurals Day 1"}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsCreatingSession(false)}>Cancel</Button>
+                        <Button onClick={createSession}>Create Session</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Attendance Table */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle>
-            Attendance for {new Date(selectedDate).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </CardTitle>
-          <CardDescription>
-            Click on status buttons to mark attendance for each student
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredStudents.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                No students found matching your criteria.
-              </p>
+      {/* Main Content Area */}
+      {/* Only show holiday message when a session exists and is type holiday */}
+      {selectedYearLevel !== 'all' && selectedSection !== 'all' && session?.type === 'holiday' ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-amber-50/50 rounded-xl border border-amber-100">
+          <CalendarDays className="h-16 w-16 text-amber-500/30 mb-4" />
+          <h3 className="text-lg font-medium text-amber-800">{session.name}</h3>
+          <p className="text-sm text-amber-600/80">No attendance required for this day.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-white p-3 rounded-lg border shadow-sm flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-gray-700">{stats.total}</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Total</span>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Grade & Section</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                    <TableHead>Remarks</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.map((student) => {
-                    const studentAttendance = getAttendanceForStudent(student.id);
-                    const currentStatus = studentAttendance?.status;
+            <div className="bg-green-50 p-3 rounded-lg border border-green-100 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-green-700">{stats.present}</span>
+              <span className="text-xs text-green-600/70 uppercase tracking-wider">Present</span>
+            </div>
+            <div className="bg-red-50 p-3 rounded-lg border border-red-100 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-red-700">{stats.absent}</span>
+              <span className="text-xs text-red-600/70 uppercase tracking-wider">Absent</span>
+            </div>
+            <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-amber-700">{stats.late}</span>
+              <span className="text-xs text-amber-600/70 uppercase tracking-wider">Late</span>
+            </div>
+          </div>
 
-                    return (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">
-                              {student.first_name} {student.middle_name && `${student.middle_name} `}{student.last_name}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {student.student_id_no}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Badge variant="outline">Grade {student.year_level}</Badge>
-                            <Badge variant="secondary">{student.section}</Badge>
-                            {student.strand && (
-                              <Badge className="bg-secondary text-secondary-foreground">
-                                {student.strand.toUpperCase()}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {currentStatus && (
-                            <Badge className={attendanceStatuses.find(s => s.value === currentStatus)?.color + " text-white"}>
-                              {attendanceStatuses.find(s => s.value === currentStatus)?.label}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {attendanceStatuses.map((status) => (
-                              <Button
-                                key={status.value}
-                                size="sm"
-                                variant={currentStatus === status.value ? "default" : "outline"}
-                                className={`h-8 px-2 ${currentStatus === status.value ? status.color : ""}`}
-                                onClick={() => updateAttendance(student.id, status.value)}
-                              >
-                                <status.icon className="h-3 w-3" />
-                              </Button>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {studentAttendance?.remarks || "—"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+          {/* Student List Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredStudents.map((student) => {
+              const record = getAttendanceForStudent(student.id);
+              const status = record?.status;
+              const activeStatus = attendanceStatuses.find(s => s.value === status);
+
+              return (
+                <Card key={student.id} className={`overflow-hidden transition-all ${status ? 'ring-1 ring-primary/20 shadow-md' : 'shadow-sm hover:shadow-md'}`}>
+                  <div className="p-4 flex flex-col gap-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-semibold text-gray-800 truncate" title={`${student.first_name} ${student.last_name}`}>
+                          {student.last_name}, {student.first_name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Grade {student.year_level} - {student.section}</div>
+                      </div>
+                      {status && (
+                        <Badge variant="outline" className={`${activeStatus?.color.split(' ')[0]} bg-transparent border-current`}>
+                          {activeStatus?.label}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1">
+                      {attendanceStatuses.map((s) => (
+                        <button
+                          key={s.value}
+                          onClick={() => updateAttendance(student.id, s.value)}
+                          className={`
+                                   flex flex-col items-center justify-center p-2 rounded-md transition-all border
+                                   ${status === s.value
+                              ? s.color + " shadow-sm scale-105 font-medium"
+                              : "bg-gray-50 text-gray-400 border-transparent hover:bg-gray-100"}
+                                 `}
+                          title={s.label}
+                        >
+                          <s.icon className={`h-5 w-5 mb-1 ${status === s.value ? "fill-current" : ""}`} />
+                          <span className="text-[10px]">{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {filteredStudents.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              No students found.
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {filteredStudents.length > 0 && (
-        <Card className="shadow-soft">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground text-center">
-              Showing {filteredStudents.length} students for {new Date(selectedDate).toLocaleDateString()}
-            </p>
-          </CardContent>
-        </Card>
+        </div>
       )}
     </div>
   );

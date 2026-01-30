@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Plus, Filter, Edit, BookOpen, Calculator, Users, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useGradingSystem } from "@/hooks/useGradingSystem";
@@ -16,10 +15,20 @@ import BatchGradeInput from "@/components/grades/BatchGradeInput";
 import BulkGradeImport from "@/components/grades/BulkGradeImport";
 import { Database } from "@/integrations/supabase/types";
 
-type Grade = Database["public"]["Tables"]["grades"]["Row"];
+// Workaround for types if Database definition is incomplete
+// type Grade = Database["public"]["Tables"]["grades"]["Row"];
 type Student = Database["public"]["Tables"]["students"]["Row"];
 
-interface GradeWithStudent extends Grade {
+interface GradeWithStudent {
+  id: string;
+  student_id: string;
+  subject: string;
+  quarter: string;
+  written_work: number | null;
+  performance_task: number | null;
+  quarterly_assessment: number | null;
+  final_grade: number | null;
+  created_at: string;
   students: Student;
 }
 
@@ -70,7 +79,7 @@ const Grades = () => {
         .select("role")
         .eq("user_id", user.id)
         .single();
-      setUserRole(data?.role || "");
+      setUserRole((data?.role || "").toLowerCase());
     }
   };
 
@@ -99,9 +108,10 @@ const Grades = () => {
       if (error) throw error;
 
       // Filter grades based on user role
-      let filteredGrades = data || [];
+      let filteredGrades = (data as unknown as GradeWithStudent[]) || [];
 
-      if (userRole === "advisor") {
+      // Normalize userRole for check
+      if (userRole.toLowerCase() === "advisor") {
         // Get advisor assignments and filter grades accordingly
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -123,21 +133,27 @@ const Grades = () => {
 
             if (advisor?.advisor_assignments && advisor.advisor_assignments.length > 0) {
               // Filter grades to only show students from advisor's assigned sections
-              filteredGrades = data?.filter(grade => {
+              filteredGrades = filteredGrades.filter(grade => {
                 return advisor.advisor_assignments.some(assignment => {
-                  const matchesYearLevel = grade.students.year_level === assignment.year_level;
-                  const matchesSection = grade.students.section === assignment.section;
+                  const assignmentYL = String(assignment.year_level || "").trim();
+                  const gradeYL = String(grade.students.year_level || "").trim();
+                  const matchesYearLevel = assignmentYL === gradeYL;
+
+                  const assignmentSection = (assignment.section || "").trim().toLowerCase();
+                  const gradeSection = (grade.students.section || "").trim().toLowerCase();
+                  const matchesSection = assignmentSection === gradeSection;
 
                   // For senior high, also check strand
                   if (assignment.strand) {
-                    const matchesStrand = grade.students.strand === assignment.strand;
+                    const assignmentStrand = (assignment.strand || "").trim().toLowerCase();
+                    const gradeStrand = (grade.students.strand || "").trim().toLowerCase();
+                    const matchesStrand = assignmentStrand === gradeStrand;
                     return matchesYearLevel && matchesSection && matchesStrand;
                   } else {
-                    // For junior high, strand should be null
                     return matchesYearLevel && matchesSection;
                   }
                 });
-              }) || [];
+              });
             }
           }
         }
@@ -167,7 +183,7 @@ const Grades = () => {
       // Filter students based on user role (same logic as grades)
       let filteredStudents = data || [];
 
-      if (userRole === "advisor") {
+      if (userRole.toLowerCase() === "advisor") {
         // Get advisor assignments and filter students accordingly
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -191,15 +207,21 @@ const Grades = () => {
               // Filter students to only show those from advisor's assigned sections
               filteredStudents = data?.filter(student => {
                 return advisor.advisor_assignments.some(assignment => {
-                  const matchesYearLevel = student.year_level === assignment.year_level;
-                  const matchesSection = student.section === assignment.section;
+                  const assignmentYL = String(assignment.year_level || "").trim();
+                  const studentYL = String(student.year_level || "").trim();
+                  const matchesYearLevel = assignmentYL === studentYL;
+
+                  const assignmentSection = (assignment.section || "").trim().toLowerCase();
+                  const studentSection = (student.section || "").trim().toLowerCase();
+                  const matchesSection = assignmentSection === studentSection;
 
                   // For senior high, also check strand
                   if (assignment.strand) {
-                    const matchesStrand = student.strand === assignment.strand;
+                    const assignmentStrand = (assignment.strand || "").trim().toLowerCase();
+                    const studentStrand = (student.strand || "").trim().toLowerCase();
+                    const matchesStrand = assignmentStrand === studentStrand;
                     return matchesYearLevel && matchesSection && matchesStrand;
                   } else {
-                    // For junior high, strand should be null
                     return matchesYearLevel && matchesSection;
                   }
                 });

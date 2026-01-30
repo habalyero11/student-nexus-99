@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Database } from "@/integrations/supabase/types";
 import { AdminAnalytics } from "@/components/analytics/AdminAnalytics";
 import { AdvisorAnalytics } from "@/components/analytics/AdvisorAnalytics";
+import { PredictiveAnalyticsCard } from "@/components/analytics/PredictiveAnalyticsCard";
 
 interface DashboardStats {
   totalStudents: number;
@@ -331,9 +332,15 @@ const Dashboard = () => {
         </Card>
       )}
 
+      {/* AI Predictive Analytics Card */}
+      {profile && (
+        <PredictiveAnalyticsCard
+          userRole={profile.role}
+          advisorAssignments={myAssignments}
+        />
+      )}
 
-
-      {/* Predictive Analytics Section */}
+      {/* Performance Analytics Section */}
       <Card className="shadow-soft">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
