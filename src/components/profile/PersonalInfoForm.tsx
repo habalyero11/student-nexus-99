@@ -13,6 +13,7 @@ interface ProfileData {
   id: string;
   user_id: string;
   email: string;
+  username?: string;
   first_name: string;
   middle_name?: string;
   last_name: string;
@@ -48,6 +49,7 @@ interface FormData {
   middle_name: string;
   last_name: string;
   email: string;
+  username: string;
   // Advisor fields
   birth_place: string;
   birth_date: string;
@@ -72,6 +74,7 @@ const PersonalInfoForm = ({ profile, advisorData, onUpdate }: PersonalInfoFormPr
     middle_name: "",
     last_name: "",
     email: "",
+    username: "",
     birth_place: "",
     birth_date: "",
     address: "",
@@ -122,6 +125,7 @@ const PersonalInfoForm = ({ profile, advisorData, onUpdate }: PersonalInfoFormPr
       middle_name: profile.middle_name || "",
       last_name: profile.last_name || "",
       email: profile.email || "",
+      username: profile.username || "",
       birth_place: advisorData?.birth_place || "",
       birth_date: advisorData?.birth_date || "",
       address: advisorData?.address || "",
@@ -178,7 +182,11 @@ const PersonalInfoForm = ({ profile, advisorData, onUpdate }: PersonalInfoFormPr
 
     setLoading(true);
     try {
-      await onUpdate(formData);
+      await onUpdate({
+        ...formData,
+        gender: formData.gender || undefined,
+        civil_status: formData.civil_status || undefined,
+      });
       setHasChanges(false);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -268,6 +276,16 @@ const PersonalInfoForm = ({ profile, advisorData, onUpdate }: PersonalInfoFormPr
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 placeholder="Enter your email address"
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                value={formData.username}
+                onChange={(e) => handleInputChange("username", e.target.value)}
+                placeholder="Enter your username"
               />
             </div>
 

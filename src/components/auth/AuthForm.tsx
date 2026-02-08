@@ -11,7 +11,7 @@ import { z } from "zod";
 import { GraduationCap, Eye, EyeOff } from "lucide-react";
 
 const authSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().min(1, "Email or Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   firstName: z.string().min(1, "First name is required").optional(),
   middleName: z.string().optional(),
@@ -50,6 +50,7 @@ export const AuthForm = () => {
     yearsOfService: "",
     tribe: "",
     religion: "",
+    username: "",
   });
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -77,12 +78,33 @@ export const AuthForm = () => {
           yearsOfService: formData.yearsOfService,
           tribe: formData.tribe,
           religion: formData.religion,
+          username: formData.username,
         }),
       });
 
       if (isLogin) {
+        let signInEmail = validation.email;
+
+        // Check if input is a username (no @ symbol)
+        if (!signInEmail.includes("@")) {
+          const { data, error } = await supabase.rpc('get_email_by_username', {
+            username_input: signInEmail
+          });
+
+          if (error || !data) {
+            toast({
+              variant: "destructive",
+              title: "Login Failed",
+              description: "Invalid username or password.",
+            });
+            setLoading(false);
+            return;
+          }
+          signInEmail = data;
+        }
+
         const { error } = await supabase.auth.signInWithPassword({
-          email: validation.email,
+          email: signInEmail,
           password: validation.password,
         });
 
@@ -105,6 +127,7 @@ export const AuthForm = () => {
               middle_name: formData.middleName || null,
               last_name: validation.lastName,
               role: "advisor", // Always register as advisor
+              username: (validation as any).username || null,
             },
           },
         });
@@ -391,11 +414,11 @@ export const AuthForm = () => {
 
             <div className={`space-y-4 ${!isLogin ? 'pt-4 border-t' : ''}`}>
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email">{isLogin ? "Email or Username" : "Email"} *</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="advisor@email.com"
+                  type="text"
+                  placeholder={isLogin ? "Enter email or username" : "advisor@email.com"}
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   required

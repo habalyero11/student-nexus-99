@@ -8,12 +8,47 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
 import { Plus, X } from "lucide-react";
 
-type Advisor = Database["public"]["Tables"]["advisors"]["Row"] & {
-  profiles: Database["public"]["Tables"]["profiles"]["Row"];
-  advisor_assignments: Database["public"]["Tables"]["advisor_assignments"]["Row"][];
+// Define strict types matching Supabase schema
+type YearLevel = "7" | "8" | "9" | "10" | "11" | "12";
+type Strand = "humms" | "stem" | "gas" | "abm" | "ict";
+
+interface AdvisorProfile {
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  email: string;
+  role: "admin" | "advisor";
+  id: string; // Added id
+}
+
+interface AdvisorAssignment {
+  year_level: YearLevel;
+  section: string;
+  strand?: Strand | null;
+  subjects?: string[] | null;
+}
+
+interface AdvisorRow {
+  id: string;
+  birth_place: string | null;
+  birth_date: string | null;
+  address: string | null;
+  contact_number: string | null;
+  employee_no: string | null;
+  position: string | null;
+  age: number | null;
+  gender: "male" | "female" | null;
+  civil_status: "single" | "married" | "widowed" | "separated" | "divorced" | null;
+  years_of_service: number | null;
+  tribe: string | null;
+  religion: string | null;
+}
+
+type Advisor = AdvisorRow & {
+  profiles: AdvisorProfile;
+  advisor_assignments: AdvisorAssignment[];
 };
 
 interface AdvisorFormProps {
@@ -46,16 +81,16 @@ interface AdvisorData {
 }
 
 interface Assignment {
-  year_level: Database["public"]["Enums"]["year_level"];
+  year_level: YearLevel;
   section: string;
-  strand?: Database["public"]["Enums"]["strand"];
+  strand?: Strand;
   subjects?: string[];
 }
 
 interface MultiSelectAssignment {
   year_levels: string[];
   sections: string[];
-  strand?: Database["public"]["Enums"]["strand"];
+  strand?: Strand;
 }
 
 const AdvisorForm = ({ advisor, onSuccess, onCancel }: AdvisorFormProps) => {
@@ -193,9 +228,9 @@ const AdvisorForm = ({ advisor, onSuccess, onCancel }: AdvisorFormProps) => {
           const assignedSubjects = selectedSubjects[assignmentKey] || [];
 
           assignments.push({
-            year_level: yearLevel as Database["public"]["Enums"]["year_level"],
+            year_level: yearLevel as YearLevel,
             section: section,
-            strand: yearLevel === "11" && selectedStrand && selectedStrand !== "none" ? selectedStrand as Database["public"]["Enums"]["strand"] : undefined,
+            strand: yearLevel === "11" && selectedStrand && selectedStrand !== "none" ? selectedStrand as Strand : undefined,
             subjects: assignedSubjects,
           });
         }
@@ -282,7 +317,7 @@ const AdvisorForm = ({ advisor, onSuccess, onCancel }: AdvisorFormProps) => {
       setSelectedYearLevels(yearLevels);
       setSelectedSections(sections);
       setSelectedStrand(strand);
-      setSelectedSubjects(subjectsMap);
+      setSelectedSubjects(subjectsMap as Record<string, string[]>);
     }
   }, [advisor]);
 
@@ -589,7 +624,7 @@ const AdvisorForm = ({ advisor, onSuccess, onCancel }: AdvisorFormProps) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="advisor">Advisor</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  {/* Admin role creation disabled <SelectItem value="admin">Admin</SelectItem> */}
                 </SelectContent>
               </Select>
             </div>

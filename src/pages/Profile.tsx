@@ -3,18 +3,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Settings, BookOpen, Shield, Calculator } from "lucide-react";
+import { User, Settings, BookOpen, Shield, Calculator, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import PersonalInfoForm from "@/components/profile/PersonalInfoForm";
 import AdvisorAssignments from "@/components/profile/AdvisorAssignments";
 import SubjectManagement from "@/components/profile/SubjectManagement";
 import GradingSystemManagement from "@/components/profile/GradingSystemManagement";
+import ChangePasswordForm from "@/components/profile/ChangePasswordForm";
 
 interface ProfileData {
   id: string;
   user_id: string;
   email: string;
+  username?: string;
   first_name: string;
   middle_name?: string;
   last_name: string;
@@ -132,6 +134,7 @@ const Profile = () => {
           middle_name: updatedData.middle_name,
           last_name: updatedData.last_name,
           email: updatedData.email,
+          username: updatedData.username,
         };
 
         const { error: profileError } = await supabase
@@ -305,6 +308,10 @@ const Profile = () => {
                 <Calculator className="h-4 w-4" />
                 <span>Grading System</span>
               </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center space-x-2">
+                <Lock className="h-4 w-4" />
+                <span>Security</span>
+              </TabsTrigger>
             </>
           )}
         </TabsList>
@@ -332,6 +339,9 @@ const Profile = () => {
             </TabsContent>
             <TabsContent value="grading" className="space-y-6">
               <GradingSystemManagement />
+            </TabsContent>
+            <TabsContent value="security" className="space-y-6">
+              <ChangePasswordForm />
             </TabsContent>
           </>
         )}
