@@ -105,8 +105,8 @@ const Landing = () => {
             <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-black/20 backdrop-blur-md supports-[backdrop-filter]:bg-black/10 transition-all duration-300">
                 <div className="container flex h-20 items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-lg shadow-primary/25">
-                            <School className="h-6 w-6 text-white" />
+                        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden shadow-lg shadow-black/20 backdrop-blur-sm border border-white/20">
+                            <img src="/icons/csu-uls.png" alt="CSU-ULS Logo" className="h-full w-full object-cover" />
                         </div>
                         <div className="flex flex-col">
                             <span className="font-bold text-lg leading-none tracking-tight text-white">CSU-ULS</span>
@@ -130,14 +130,14 @@ const Landing = () => {
                     </nav>
 
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 p-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm pr-1.5 pl-4 transition-all hover:bg-white/10 hover:border-white/20 scale-75 origin-right md:scale-100">
+                        <div className="flex items-center gap-2 p-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm pr-1.5 pl-4 transition-all hover:bg-white/10 hover:border-white/20 scale-[0.60] origin-right md:scale-100">
                             <div className="flex items-center gap-3 mr-2">
                                 <div className="relative group">
                                     <Hash className="absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/50 group-hover:text-white/80 transition-colors" />
                                     <input
                                         type="text"
                                         placeholder="ID Number"
-                                        className="h-8 w-24 pl-5 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0"
+                                        className="h-8 w-20 md:w-24 pl-5 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0"
                                         value={studentId}
                                         onChange={(e) => setStudentId(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleStudentLogin())}
@@ -149,7 +149,7 @@ const Landing = () => {
                                     <input
                                         type={showPassword ? "text" : "password"}
                                         placeholder="Password"
-                                        className="h-8 w-24 pl-5 pr-6 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0"
+                                        className="h-8 w-20 md:w-24 pl-5 pr-6 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleStudentLogin())}
