@@ -106,7 +106,7 @@ const Landing = () => {
                 <div className="container flex h-20 items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden shadow-lg shadow-black/20 backdrop-blur-sm border border-white/20">
-                            <img src="/icons/csu-uls.png" alt="CSU-ULS Logo" className="h-full w-full object-cover" />
+                            <img src="/icons/android-chrome-192x192.png" alt="CSU-ULS Logo" className="h-full w-full object-cover" />
                         </div>
                         <div className="flex flex-col">
                             <span className="font-bold text-lg leading-none tracking-tight text-white">CSU-ULS</span>
