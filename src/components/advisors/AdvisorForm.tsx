@@ -130,23 +130,11 @@ const AdvisorForm = ({ advisor, onSuccess, onCancel }: AdvisorFormProps) => {
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedStrand, setSelectedStrand] = useState<string>("none");
   const [selectedSubjects, setSelectedSubjects] = useState<Record<string, string[]>>({});
+  const [availableSections, setAvailableSections] = useState<Record<string, string[]>>({});
 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  // Section mappings
-  const juniorHighSections = {
-    "7": ["Archimedes", "Laplace", "Miletus"],
-    "8": ["Herschel", "Linnaeus", "Pythagoras"],
-    "9": ["Ptolemy", "Euclid", "Pascal"],
-    "10": ["Hypatia", "Euler", "Lagrange"],
-  };
-
-  const seniorHighSections = {
-    "11": ["Maxwell"],
-    "12": ["Einstein", "Newton", "Aristotle", "Pasteur"],
-  };
 
   const strands = ["humms", "stem", "gas", "abm", "ict"] as const;
 
@@ -181,12 +169,7 @@ const AdvisorForm = ({ advisor, onSuccess, onCancel }: AdvisorFormProps) => {
   };
 
   const getSectionsByYearLevel = (yearLevel: string) => {
-    if (["7", "8", "9", "10"].includes(yearLevel)) {
-      return juniorHighSections[yearLevel as keyof typeof juniorHighSections] || [];
-    } else if (["11", "12"].includes(yearLevel)) {
-      return seniorHighSections[yearLevel as keyof typeof seniorHighSections] || [];
-    }
-    return [];
+    return availableSections[yearLevel] || [];
   };
 
   const getAllAvailableSections = () => {
@@ -198,6 +181,41 @@ const AdvisorForm = ({ advisor, onSuccess, onCancel }: AdvisorFormProps) => {
     });
     return Array.from(allSections).sort();
   };
+
+  // Fetch sections from database
+  React.useEffect(() => {
+    const fetchSections = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("sections")
+          .select("name, year_level")
+          .order("year_level")
+          .order("name");
+
+        if (error) throw error;
+
+        // Group sections by year level
+        const sectionsByYear: Record<string, string[]> = {};
+        data?.forEach((section) => {
+          if (!sectionsByYear[section.year_level]) {
+            sectionsByYear[section.year_level] = [];
+          }
+          sectionsByYear[section.year_level].push(section.name);
+        });
+
+        setAvailableSections(sectionsByYear);
+      } catch (error) {
+        console.error("Error fetching sections:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load sections from database",
+        });
+      }
+    };
+
+    fetchSections();
+  }, []);
 
   const getAvailableSubjectsForGrade = (yearLevel: string): string[] => {
     return subjectsByGrade[yearLevel] || [];
@@ -864,26 +882,45 @@ const AdvisorForm = ({ advisor, onSuccess, onCancel }: AdvisorFormProps) => {
             </div>
           </div>
 
-          {/* Section Selection */}
+          {/* Section Selection - Grouped by Year Level */}
           {selectedYearLevels.length > 0 && (
             <div className="space-y-3">
               <Label className="text-base font-semibold">Sections</Label>
               <p className="text-xs text-muted-foreground">
-                Available sections based on selected year levels
+                Select sections for each year level
               </p>
-              <div className="flex flex-col space-y-2">
-                {getAllAvailableSections().map((section) => (
-                  <div key={section} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`section-${section}`}
-                      checked={selectedSections.includes(section)}
-                      onCheckedChange={() => toggleSection(section)}
-                    />
-                    <Label htmlFor={`section-${section}`} className="text-sm">
-                      {section}
-                    </Label>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                {selectedYearLevels.map(yearLevel => {
+                  const sectionsForYear = getSectionsByYearLevel(yearLevel);
+                  if (sectionsForYear.length === 0) return null;
+
+                  return (
+                    <Card key={yearLevel} className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">Grade {yearLevel}</h4>
+                          <div className="text-sm text-muted-foreground">
+                            {selectedSections.filter(s => sectionsForYear.includes(s)).length} / {sectionsForYear.length} sections
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                          {sectionsForYear.map((section) => (
+                            <div key={section} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`section-${yearLevel}-${section}`}
+                                checked={selectedSections.includes(section)}
+                                onCheckedChange={() => toggleSection(section)}
+                              />
+                              <Label htmlFor={`section-${yearLevel}-${section}`} className="text-sm cursor-pointer">
+                                {section}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}

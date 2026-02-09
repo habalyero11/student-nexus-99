@@ -24,16 +24,6 @@ const GradeSheet = () => {
   const [availableYearLevels, setAvailableYearLevels] = useState<string[]>([]);
   const { gradingSystem } = useGradingSystem();
 
-  // Section mappings
-  const allSections = {
-    "7": ["Archimedes", "Laplace", "Miletus"],
-    "8": ["Herschel", "Linnaeus", "Pythagoras"],
-    "9": ["Ptolemy", "Euclid", "Pascal"],
-    "10": ["Hypatia", "Euler", "Lagrange"],
-    "11": ["Maxwell"],
-    "12": ["Einstein", "Newton", "Aristotle", "Pasteur"],
-  };
-
   const quarters = [
     { value: "1st", label: "1st Quarter" },
     { value: "2nd", label: "2nd Quarter" },
@@ -81,9 +71,38 @@ const GradeSheet = () => {
     }
   }, [advisorAssignments, userRole]);
 
+  // Fetch sections from database
   useEffect(() => {
-    // Update available sections and subjects when year level changes
-    let sections = allSections[selectedYearLevel as keyof typeof allSections] || [];
+    const fetchSections = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("sections")
+          .select("name")
+          .eq("year_level", selectedYearLevel)
+          .order("name");
+
+        if (error) throw error;
+
+        const allSections = data?.map(s => s.name) || [];
+        setAvailableSections(allSections);
+
+        // Auto-select first section if available and none selected
+        if (allSections.length > 0 && !selectedSection) {
+          setSelectedSection(allSections[0]);
+        } else if (!allSections.includes(selectedSection)) {
+          setSelectedSection(allSections[0] || "");
+        }
+      } catch (error) {
+        console.error("Error fetching sections:", error);
+      }
+    };
+
+    fetchSections();
+  }, [selectedYearLevel]);
+
+  useEffect(() => {
+    // Update available sections when year level changes
+    let sections = availableSections;
 
     // If advisor, filter sections based on assignments
     if (userRole === "advisor" && advisorAssignments.length > 0) {
@@ -99,43 +118,63 @@ const GradeSheet = () => {
     if (!selectedSection || !sections.includes(selectedSection)) {
       setSelectedSection(sections[0] || "");
     }
+  }, [selectedYearLevel, availableSections, advisorAssignments, userRole]);
 
-    let subjects = getSubjectsByGradeLevel(selectedYearLevel);
+  // Fetch subjects dynamically based on what's assigned to the section
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        // Don't fetch until we have year level and section
+        if (!selectedYearLevel || !selectedSection) {
+          setAvailableSubjects([]);
+          return;
+        }
 
-    // If advisor, filter subjects based on assignments for the SPECIFIC year level
-    if (userRole === "advisor" && advisorAssignments.length > 0) {
-      const assignedSubjectsForYearLevel = new Set<string>();
+        // Get ALL subjects assigned to this section from ANY advisor
+        const { data: assignments } = await supabase
+          .from("advisor_assignments")
+          .select("subjects")
+          .eq("year_level", selectedYearLevel)
+          .eq("section", selectedSection);
 
-      // Only collect subjects assigned to this advisor for the CURRENT selected year level
-      advisorAssignments
-        .filter(assignment => assignment.year_level === selectedYearLevel)
-        .forEach(assignment => {
-          if (assignment.subjects) {
-            assignment.subjects.forEach(subject => assignedSubjectsForYearLevel.add(subject));
-          }
-        });
+        if (!assignments || assignments.length === 0) {
+          setAvailableSubjects([]);
+          setSelectedSubject("all");
+          return;
+        }
 
-      // Filter subjects to only show those assigned for this specific year level
-      if (assignedSubjectsForYearLevel.size > 0) {
-        subjects = subjects.filter(subject => assignedSubjectsForYearLevel.has(subject));
-      } else {
-        // No subjects assigned for this year level
-        subjects = [];
+        // Collect all subjects for this section
+        let allSectionSubjects = [...new Set(
+          assignments.flatMap(a => a.subjects || [])
+        )];
+
+        // If advisor, further filter to only their assigned subjects
+        if (userRole === "advisor" && advisorAssignments.length > 0) {
+          const advisorSubjectsForSection = advisorAssignments
+            .filter(a => a.year_level === selectedYearLevel && a.section === selectedSection)
+            .flatMap(a => a.subjects || []);
+
+          const uniqueAdvisorSubjects = [...new Set(advisorSubjectsForSection)];
+
+          // Only show subjects that the advisor teaches in this section
+          allSectionSubjects = allSectionSubjects.filter(s =>
+            uniqueAdvisorSubjects.includes(s)
+          );
+        }
+
+        setAvailableSubjects(allSectionSubjects);
+
+        // Auto-select "all" if no subject is selected or current selection not available
+        if (selectedSubject !== "all" && !allSectionSubjects.includes(selectedSubject)) {
+          setSelectedSubject("all");
+        }
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
       }
-    }
+    };
 
-    setAvailableSubjects(subjects);
-
-    // Auto-select "all" if no subject is selected or if current selection is not available
-    if (selectedSubject !== "all" && !subjects.includes(selectedSubject)) {
-      setSelectedSubject("all");
-    }
-
-    // If there are no subjects available for advisor, clear the selection
-    if (userRole === "advisor" && subjects.length === 0 && selectedSubject !== "all") {
-      setSelectedSubject("all");
-    }
-  }, [selectedYearLevel, userRole, advisorAssignments]);
+    fetchSubjects();
+  }, [selectedYearLevel, selectedSection, userRole, advisorAssignments]);
 
   const fetchUserProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();

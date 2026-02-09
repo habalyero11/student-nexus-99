@@ -16,6 +16,7 @@ import Students from "./pages/Students";
 import Advisors from "./pages/Advisors";
 import Grades from "./pages/Grades";
 import GradeSheet from "./pages/GradeSheet";
+import ExcelGradeSheet from "./pages/ExcelGradeSheet";
 import Attendance from "./pages/Attendance";
 import Analytics from "./pages/Analytics";
 import Profile from "./pages/Profile";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="advisors" element={<Advisors />} />
             <Route path="grades" element={<Grades />} />
             <Route path="grade-sheet" element={<GradeSheet />} />
+            <Route path="excel-grade-sheet" element={<ExcelGradeSheet />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="password-reset-requests" element={<PasswordResetRequests />} />

@@ -11,6 +11,7 @@ import {
   BookOpen,
   Grid3X3,
   KeyRound,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   Sidebar,
@@ -81,6 +82,7 @@ export const AppSidebar = () => {
     { title: "Advisors", url: "/advisors", icon: UserCheck },
     { title: "Grades", url: "/grades", icon: BookOpen },
     { title: "Grade Sheet", url: "/grade-sheet", icon: Grid3X3 },
+    // { title: "Excel Grade Sheet", url: "/excel-grade-sheet", icon: FileSpreadsheet },
     { title: "Attendance", url: "/attendance", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: Users },
     { title: "Password Reset", url: "/password-reset-requests", icon: KeyRound },
@@ -91,6 +93,7 @@ export const AppSidebar = () => {
     { title: "Students", url: "/students", icon: GraduationCap },
     { title: "Grades", url: "/grades", icon: BookOpen },
     { title: "Grade Sheet", url: "/grade-sheet", icon: Grid3X3 },
+    // { title: "Excel Grade Sheet", url: "/excel-grade-sheet", icon: FileSpreadsheet },
     { title: "Attendance", url: "/attendance", icon: Calendar },
     { title: "Analytics", url: "/analytics", icon: Users },
     { title: "Password Reset", url: "/password-reset-requests", icon: KeyRound },
@@ -128,13 +131,12 @@ export const AppSidebar = () => {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild className="hover:bg-sidebar-accent transition-colors">
-                    <NavLink 
-                      to={item.url} 
+                    <NavLink
+                      to={item.url}
                       className={({ isActive }) =>
-                        `flex items-center space-x-3 px-3 py-2 rounded-md ${
-                          isActive 
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
-                            : "text-sidebar-foreground hover:text-sidebar-foreground"
+                        `flex items-center space-x-3 px-3 py-2 rounded-md ${isActive
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
+                          : "text-sidebar-foreground hover:text-sidebar-foreground"
                         }`
                       }
                     >
@@ -160,7 +162,7 @@ export const AppSidebar = () => {
             </p>
           </div>
         )}
-        
+
         <div className="space-y-2">
           <Button
             variant="ghost"
@@ -171,7 +173,7 @@ export const AppSidebar = () => {
             <Settings className="h-4 w-4" />
             {!collapsed && <span className="ml-2">Profile</span>}
           </Button>
-          
+
           <Button
             variant="ghost"
             size="sm"

@@ -6,6 +6,7 @@
 -- Since the student_id also has an ON DELETE CASCADE on this table, the history will still be wiped appropriately.
 
 ALTER TABLE public.grade_history DROP CONSTRAINT IF EXISTS grade_history_grade_id_fkey;
+ALTER TABLE public.grade_history DROP CONSTRAINT IF EXISTS grade_history_student_id_fkey;
 
 -- We keep the column for reference but without the hard enforcement during deletion.
 -- Optional: Re-add as a nullable reference if needed, but for audit trails of deleted records, 

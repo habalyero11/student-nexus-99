@@ -1,0 +1,344 @@
+{
+  "sheet_name": "ESP Q2",
+  "dimensions": "A1:BF119",
+  "max_row": 119,
+  "max_column": 58,
+  "metadata_rows": [
+    {
+      "row": 1,
+      "data": {
+        "col_1": "Class Record "
+      }
+    },
+    {
+      "row": 3,
+      "data": {
+        "col_1": "(Pursuant to Deped Order 8 series of 2015)"
+      }
+    },
+    {
+      "row": 4,
+      "data": {
+        "col_3": "REGION",
+        "col_7": "='INPUT DATA'!G4",
+        "col_12": "DIVISION",
+        "col_15": "='INPUT DATA'!O4"
+      }
+    },
+    {
+      "row": 5,
+      "data": {
+        "col_2": "SCHOOL NAME",
+        "col_7": "='INPUT DATA'!G5",
+        "col_20": "SCHOOL ID",
+        "col_24": "='INPUT DATA'!X5"
+      }
+    },
+    {
+      "row": 7,
+      "data": {
+        "col_1": "SECOND QUARTER",
+        "col_6": "GRADE & SECTION: ",
+        "col_11": "='INPUT DATA'!K7",
+        "col_17": "TEACHER:",
+        "col_19": "='INPUT DATA'!S7",
+        "col_29": "SUBJECT:"
+      }
+    },
+    {
+      "row": 8,
+      "data": {
+        "col_2": "LEARNERS' NAMES",
+        "col_6": "WRITTEN WORKS (30%)",
+        "col_19": "PERFORMANCE TASKS (50%)"
+      }
+    },
+    {
+      "row": 9,
+      "data": {
+        "col_6": "1",
+        "col_7": "2",
+        "col_8": "3",
+        "col_9": "4",
+        "col_10": "5",
+        "col_11": "6",
+        "col_12": "7",
+        "col_13": "8",
+        "col_14": "9",
+        "col_15": "10",
+        "col_16": "Total",
+        "col_17": "PS",
+        "col_18": "WS",
+        "col_19": "1",
+        "col_20": "2",
+        "col_21": "3",
+        "col_22": "4",
+        "col_23": "5",
+        "col_24": "6",
+        "col_25": "7",
+        "col_26": "8",
+        "col_27": "9",
+        "col_28": "10",
+        "col_29": "Total"
+      }
+    },
+    {
+      "row": 10,
+      "data": {
+        "col_2": "HIGHEST POSSIBLE SCORE",
+        "col_6": "10",
+        "col_7": "10",
+        "col_8": "10",
+        "col_16": "=IF(COUNT($F10:$O10)=0,\"\",SUM($F10:$O10))",
+        "col_17": "100",
+        "col_18": "0.3",
+        "col_19": "50",
+        "col_20": "60",
+        "col_29": "=IF(COUNT($S10:$AB10)=0,\"\",SUM($S10:$AB10))"
+      }
+    },
+    {
+      "row": 11,
+      "data": {
+        "col_2": "MALE "
+      }
+    },
+    {
+      "row": 12,
+      "data": {
+        "col_1": "1",
+        "col_2": "='INPUT DATA'!B12",
+        "col_6": "10",
+        "col_7": "9",
+        "col_8": "9",
+        "col_16": "=IF(COUNT($F12:$O12)=0,\"\",SUM($F12:$O12))",
+        "col_17": "=IF(ISERROR(IF($P12=\"\",\"\",ROUND(($P12/$P$10)*$Q$10,2))),\"\",IF($P12=\"\",\"\",ROUND(($P12/$P$10)*$Q$10,2)))",
+        "col_18": "=IF($Q12=\"\",\"\",ROUND($Q12*$R$10,2))",
+        "col_19": "50",
+        "col_20": "55",
+        "col_29": "=IF(COUNT($S12:$AB12)=0,\"\",SUM($S12:$AB12))"
+      }
+    },
+    {
+      "row": 13,
+      "data": {
+        "col_1": "2",
+        "col_2": "='INPUT DATA'!B13",
+        "col_16": "=IF(COUNT($F13:$O13)=0,\"\",SUM($F13:$O13))",
+        "col_17": "=IF(ISERROR(IF($P13=\"\",\"\",ROUND(($P13/$P$10)*$Q$10,2))),\"\",IF($P13=\"\",\"\",ROUND(($P13/$P$10)*$Q$10,2)))",
+        "col_18": "=IF($Q13=\"\",\"\",ROUND($Q13*$R$10,2))",
+        "col_29": "=IF(COUNT($S13:$AB13)=0,\"\",SUM($S13:$AB13))"
+      }
+    }
+  ],
+  "column_headers": {
+    "col_2": "LEARNERS' NAMES",
+    "col_6": "WRITTEN WORKS (30%)",
+    "col_19": "PERFORMANCE TASKS (50%)",
+    "col_32": "QUARTERLY ASSESSMENT (20%)",
+    "col_35": "Initial ",
+    "col_36": "   Quarterly                 \n"
+  },
+  "sample_data": [
+    {
+      "row": 9,
+      "data": {
+        "col_6": "1",
+        "col_7": "2",
+        "col_8": "3",
+        "col_9": "4",
+        "col_10": "5",
+        "col_11": "6",
+        "col_12": "7",
+        "col_13": "8",
+        "col_14": "9"
+      }
+    },
+    {
+      "row": 10,
+      "data": {
+        "col_2": "HIGHEST POSSIBLE SCORE",
+        "col_6": "10",
+        "col_7": "10",
+        "col_8": "10"
+      }
+    },
+    {
+      "row": 11,
+      "data": {
+        "col_2": "MALE "
+      }
+    },
+    {
+      "row": 12,
+      "data": {
+        "col_1": "1",
+        "col_2": "='INPUT DATA'!B12",
+        "col_6": "10",
+        "col_7": "9",
+        "col_8": "9"
+      }
+    },
+    {
+      "row": 13,
+      "data": {
+        "col_1": "2",
+        "col_2": "='INPUT DATA'!B13"
+      }
+    }
+  ],
+  "formulas": [
+    {
+      "cell": "G4",
+      "formula": "='INPUT DATA'!G4"
+    },
+    {
+      "cell": "O4",
+      "formula": "='INPUT DATA'!O4"
+    },
+    {
+      "cell": "G5",
+      "formula": "='INPUT DATA'!G5"
+    },
+    {
+      "cell": "X5",
+      "formula": "='INPUT DATA'!X5"
+    },
+    {
+      "cell": "K7",
+      "formula": "='INPUT DATA'!K7"
+    },
+    {
+      "cell": "S7",
+      "formula": "='INPUT DATA'!S7"
+    },
+    {
+      "cell": "P10",
+      "formula": "=IF(COUNT($F10:$O10)=0,\"\",SUM($F10:$O10))"
+    },
+    {
+      "cell": "AC10",
+      "formula": "=IF(COUNT($S10:$AB10)=0,\"\",SUM($S10:$AB10))"
+    },
+    {
+      "cell": "B12",
+      "formula": "='INPUT DATA'!B12"
+    },
+    {
+      "cell": "P12",
+      "formula": "=IF(COUNT($F12:$O12)=0,\"\",SUM($F12:$O12))"
+    },
+    {
+      "cell": "Q12",
+      "formula": "=IF(ISERROR(IF($P12=\"\",\"\",ROUND(($P12/$P$10)*$Q$10,2))),\"\",IF($P12=\"\",\"\",ROUND(($P12/$P$10)*$Q$10,2)))"
+    },
+    {
+      "cell": "R12",
+      "formula": "=IF($Q12=\"\",\"\",ROUND($Q12*$R$10,2))"
+    },
+    {
+      "cell": "AC12",
+      "formula": "=IF(COUNT($S12:$AB12)=0,\"\",SUM($S12:$AB12))"
+    },
+    {
+      "cell": "B13",
+      "formula": "='INPUT DATA'!B13"
+    },
+    {
+      "cell": "P13",
+      "formula": "=IF(COUNT($F13:$O13)=0,\"\",SUM($F13:$O13))"
+    },
+    {
+      "cell": "Q13",
+      "formula": "=IF(ISERROR(IF($P13=\"\",\"\",ROUND(($P13/$P$10)*$Q$10,2))),\"\",IF($P13=\"\",\"\",ROUND(($P13/$P$10)*$Q$10,2)))"
+    },
+    {
+      "cell": "R13",
+      "formula": "=IF($Q13=\"\",\"\",ROUND($Q13*$R$10,2))"
+    },
+    {
+      "cell": "AC13",
+      "formula": "=IF(COUNT($S13:$AB13)=0,\"\",SUM($S13:$AB13))"
+    },
+    {
+      "cell": "B27",
+      "formula": "='INPUT DATA'!B27"
+    },
+    {
+      "cell": "P27",
+      "formula": "=IF(COUNT($F27:$O27)=0,\"\",SUM($F27:$O27))"
+    },
+    {
+      "cell": "Q27",
+      "formula": "=IF(ISERROR(IF($P27=\"\",\"\",ROUND(($P27/$P$10)*$Q$10,2))),\"\",IF($P27=\"\",\"\",ROUND(($P27/$P$10)*$Q$10,2)))"
+    },
+    {
+      "cell": "R27",
+      "formula": "=IF($Q27=\"\",\"\",ROUND($Q27*$R$10,2))"
+    },
+    {
+      "cell": "AC27",
+      "formula": "=IF(COUNT($S27:$AB27)=0,\"\",SUM($S27:$AB27))"
+    },
+    {
+      "cell": "B28",
+      "formula": "='INPUT DATA'!B28"
+    },
+    {
+      "cell": "P28",
+      "formula": "=IF(COUNT($F28:$O28)=0,\"\",SUM($F28:$O28))"
+    },
+    {
+      "cell": "Q28",
+      "formula": "=IF(ISERROR(IF($P28=\"\",\"\",ROUND(($P28/$P$10)*$Q$10,2))),\"\",IF($P28=\"\",\"\",ROUND(($P28/$P$10)*$Q$10,2)))"
+    },
+    {
+      "cell": "R28",
+      "formula": "=IF($Q28=\"\",\"\",ROUND($Q28*$R$10,2))"
+    },
+    {
+      "cell": "AC28",
+      "formula": "=IF(COUNT($S28:$AB28)=0,\"\",SUM($S28:$AB28))"
+    },
+    {
+      "cell": "B29",
+      "formula": "='INPUT DATA'!B29"
+    },
+    {
+      "cell": "P29",
+      "formula": "=IF(COUNT($F29:$O29)=0,\"\",SUM($F29:$O29))"
+    }
+  ],
+  "merged_cells": [
+    "AN12:BF12",
+    "AN21:BF21",
+    "Q7:R7",
+    "G4:J4",
+    "AI9:AI10",
+    "AN18:BF18",
+    "AN14:BF14",
+    "AN23:BF23",
+    "L4:N4",
+    "AN17:BF17",
+    "F7:J7",
+    "X5:AC5",
+    "A3:AJ3",
+    "A7:E7",
+    "AN19:BF19",
+    "G5:R5",
+    "B62:E62",
+    "AC7:AF7",
+    "AN13:BF13",
+    "X4:AC4",
+    "AF8:AH8",
+    "T5:W5",
+    "AN9:BF9",
+    "K7:P7",
+    "A1:AJ2",
+    "AN24:BF24",
+    "AN15:BF15",
+    "AG5:AI5",
+    "C4:F4",
+    "T4:W4"
+  ]
+}

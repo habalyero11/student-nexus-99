@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import PersonalInfoForm from "@/components/profile/PersonalInfoForm";
 import AdvisorAssignments from "@/components/profile/AdvisorAssignments";
 import SubjectManagement from "@/components/profile/SubjectManagement";
+import SectionManagement from "@/components/profile/SectionManagement";
 import GradingSystemManagement from "@/components/profile/GradingSystemManagement";
 import ChangePasswordForm from "@/components/profile/ChangePasswordForm";
 
@@ -289,7 +290,7 @@ const Profile = () => {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${profile.role === "admin" ? "grid-cols-4" : "grid-cols-2"}`}>
+        <TabsList className={`grid w-full ${profile.role === "admin" ? "grid-cols-5" : "grid-cols-3"}`}>
           <TabsTrigger value="personal" className="flex items-center space-x-2">
             <User className="h-4 w-4" />
             <span>Personal Info</span>
@@ -298,15 +299,19 @@ const Profile = () => {
             <BookOpen className="h-4 w-4" />
             <span>My Assignments</span>
           </TabsTrigger>
+          <TabsTrigger value="grading" className="flex items-center space-x-2">
+            <Calculator className="h-4 w-4" />
+            <span>Grading System</span>
+          </TabsTrigger>
           {profile.role === "admin" && (
             <>
+              <TabsTrigger value="sections" className="flex items-center space-x-2">
+                <Settings className="h-4 w-4" />
+                <span>Sections</span>
+              </TabsTrigger>
               <TabsTrigger value="subjects" className="flex items-center space-x-2">
                 <Settings className="h-4 w-4" />
-                <span>Subject Management</span>
-              </TabsTrigger>
-              <TabsTrigger value="grading" className="flex items-center space-x-2">
-                <Calculator className="h-4 w-4" />
-                <span>Grading System</span>
+                <span>Subjects</span>
               </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center space-x-2">
                 <Lock className="h-4 w-4" />
@@ -332,13 +337,17 @@ const Profile = () => {
           />
         </TabsContent>
 
+        <TabsContent value="grading" className="space-y-6">
+          <GradingSystemManagement />
+        </TabsContent>
+
         {profile.role === "admin" && (
           <>
+            <TabsContent value="sections" className="space-y-6">
+              <SectionManagement />
+            </TabsContent>
             <TabsContent value="subjects" className="space-y-6">
               <SubjectManagement />
-            </TabsContent>
-            <TabsContent value="grading" className="space-y-6">
-              <GradingSystemManagement />
             </TabsContent>
             <TabsContent value="security" className="space-y-6">
               <ChangePasswordForm />
