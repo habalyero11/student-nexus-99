@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate, Link } from "react-router-dom";
 import { GraduationCap, BarChart3, Users, School, ArrowRight, Lock, Hash, Eye, EyeOff } from "lucide-react";
 
@@ -18,6 +19,8 @@ const Landing = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [checking, setChecking] = useState(false);
     const [defaultPasswordOpen, setDefaultPasswordOpen] = useState(false);
+    const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+    const [loginError, setLoginError] = useState("");
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -35,19 +38,11 @@ const Landing = () => {
 
     const handleStudentLogin = async () => {
         if (!studentId.trim()) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Please enter your Student ID number.",
-            });
+            setLoginError("Enter ID");
             return;
         }
         if (!password) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Please enter your password.",
-            });
+            setLoginError("Enter Password");
             return;
         }
 
@@ -61,11 +56,15 @@ const Landing = () => {
                 const message = (error as any)?.message || data?.error || "Failed to sign in.";
 
                 // Provide more specific error messages
-                let errorDescription = message;
                 if (message === "Invalid Student ID or password") {
-                    errorDescription = "Invalid Student ID or password. Please check your credentials and try again.";
-                } else if (message.includes("network") || message.includes("fetch")) {
-                    errorDescription = "Network error. Please check your internet connection and try again.";
+                    setLoginError("Wrong password or ID");
+                    setChecking(false);
+                    return;
+                }
+
+                let errorDescription = message;
+                if (message.includes("network") || message.includes("fetch")) {
+                    errorDescription = "Network error. Please check your internet connection.";
                 }
 
                 toast({
@@ -130,50 +129,92 @@ const Landing = () => {
                     </nav>
 
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 p-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm pr-1.5 pl-4 transition-all hover:bg-white/10 hover:border-white/20 scale-[0.60] origin-right md:scale-100">
-                            <div className="flex items-center gap-3 mr-2">
-                                <div className="relative group">
-                                    <Hash className="absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/50 group-hover:text-white/80 transition-colors" />
-                                    <input
-                                        type="text"
-                                        placeholder="ID Number"
-                                        className="h-8 w-20 md:w-24 pl-5 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0"
-                                        value={studentId}
-                                        onChange={(e) => setStudentId(e.target.value)}
-                                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleStudentLogin())}
-                                    />
+                        <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-2 p-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm pr-1.5 pl-4 transition-all hover:bg-white/10 hover:border-white/20 scale-[0.60] origin-right md:scale-100 relative">
+                                <div className="flex items-center gap-3 mr-2">
+                                    <div className="relative group">
+                                        <Hash className={`absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 transition-colors ${loginError ? 'text-red-400' : 'text-white/50 group-hover:text-white/80'}`} />
+                                        <input
+                                            type="text"
+                                            placeholder="ID Number"
+                                            className={`h-8 w-20 md:w-24 pl-5 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0 ${loginError ? 'placeholder:text-red-300/50' : ''}`}
+                                            value={studentId}
+                                            onChange={(e) => {
+                                                setStudentId(e.target.value);
+                                                setLoginError("");
+                                            }}
+                                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleStudentLogin())}
+                                        />
+                                    </div>
+                                    <div className="w-px h-4 bg-white/10" />
+                                    <div className="relative group">
+                                        <Lock className={`absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 transition-colors ${loginError ? 'text-red-400' : 'text-white/50 group-hover:text-white/80'}`} />
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="Password"
+                                            className={`h-8 w-20 md:w-24 pl-5 pr-6 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0 ${loginError ? 'placeholder:text-red-300/50' : ''}`}
+                                            value={password}
+                                            onChange={(e) => {
+                                                setPassword(e.target.value);
+                                                setLoginError("");
+                                            }}
+                                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleStudentLogin())}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute right-0 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                                            onClick={() => setShowPassword((s) => !s)}
+                                        >
+                                            {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="w-px h-4 bg-white/10" />
-                                <div className="relative group">
-                                    <Lock className="absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/50 group-hover:text-white/80 transition-colors" />
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="Password"
-                                        className="h-8 w-20 md:w-24 pl-5 pr-6 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleStudentLogin())}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="absolute right-0 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
-                                        onClick={() => setShowPassword((s) => !s)}
-                                    >
-                                        {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                                    </button>
-                                </div>
+                                <Button
+                                    size="sm"
+                                    onClick={handleStudentLogin}
+                                    disabled={checking}
+                                    className={`rounded-full px-5 h-8 font-medium transition-colors ${loginError ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white text-black hover:bg-white/90'}`}
+                                >
+                                    {checking ? "..." : "Login"}
+                                </Button>
                             </div>
-                            <Button
-                                size="sm"
-                                onClick={handleStudentLogin}
-                                disabled={checking}
-                                className="rounded-full px-5 h-8 bg-white text-black hover:bg-white/90 font-medium"
-                            >
-                                {checking ? "..." : "Login"}
-                            </Button>
+
+                            <div className="flex items-center gap-3 text-[10px] md:text-xs">
+                                {loginError && (
+                                    <span className="text-red-400 font-medium animate-pulse">
+                                        {loginError}
+                                    </span>
+                                )}
+                                <button
+                                    onClick={() => setForgotPasswordOpen(true)}
+                                    className="text-white/60 hover:text-white transition-colors hover:underline"
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
                         </div>
 
                         <DefaultPasswordDialog open={defaultPasswordOpen} onOpenChange={setDefaultPasswordOpen} />
+
+                        <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Forgot Password</DialogTitle>
+                                    <DialogDescription>
+                                        Please contact the University Registrar or your Academic Advisor to reset your password.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                    <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
+                                        <p><strong>Note:</strong> Self-service password reset is currently unavailable for student accounts to ensure security.</p>
+                                        <p>Bring your Student ID when visiting the office for verification.</p>
+                                    </div>
+                                    <Button className="w-full" onClick={() => setForgotPasswordOpen(false)}>
+                                        Understood
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
 
                         <div className="lg:hidden">
                             {session && (
