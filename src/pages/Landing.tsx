@@ -56,7 +56,7 @@ const Landing = () => {
                 const message = (error as any)?.message || data?.error || "Failed to sign in.";
 
                 // Provide more specific error messages
-                if (message === "Invalid Student ID or password") {
+                if (message === "Invalid Student ID or password" || message.includes("non-2xx")) {
                     setLoginError("Wrong password or ID");
                     setChecking(false);
                     return;
