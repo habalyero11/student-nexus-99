@@ -84,7 +84,6 @@ export const AppSidebar = () => {
     { title: "Grade Sheet", url: "/grade-sheet", icon: Grid3X3 },
     // { title: "Excel Grade Sheet", url: "/excel-grade-sheet", icon: FileSpreadsheet },
     { title: "Attendance", url: "/attendance", icon: Calendar },
-    { title: "Analytics", url: "/analytics", icon: Users },
     { title: "Password Reset", url: "/password-reset-requests", icon: KeyRound },
   ];
 
@@ -95,7 +94,6 @@ export const AppSidebar = () => {
     { title: "Grade Sheet", url: "/grade-sheet", icon: Grid3X3 },
     // { title: "Excel Grade Sheet", url: "/excel-grade-sheet", icon: FileSpreadsheet },
     { title: "Attendance", url: "/attendance", icon: Calendar },
-    { title: "Analytics", url: "/analytics", icon: Users },
     { title: "Password Reset", url: "/password-reset-requests", icon: KeyRound },
   ];
 

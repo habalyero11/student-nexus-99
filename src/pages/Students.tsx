@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -80,6 +81,7 @@ const Students = () => {
     strand?: string;
   }>>([]);
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Group students by year level and section
   const groupStudentsBySection = (students: Student[]) => {
@@ -155,6 +157,19 @@ const Students = () => {
       fetchStudents();
     }
   }, [userRole]);
+
+  // Auto-open student details dialog when navigated with ?student=<id>
+  useEffect(() => {
+    const studentId = searchParams.get("student");
+    if (!studentId || students.length === 0) return;
+    if (selectedStudentForDetails?.id === studentId && showDetailsDialog) return;
+
+    const target = students.find(s => s.id === studentId);
+    if (target) {
+      handleViewDetails(target);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, students]);
 
   const fetchUserProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -632,7 +647,15 @@ const Students = () => {
       </Dialog>
 
       {/* Student Details Dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+      <Dialog open={showDetailsDialog} onOpenChange={(open) => {
+        setShowDetailsDialog(open);
+        if (!open && searchParams.get("student")) {
+          // Remove the ?student=... param when dialog is closed
+          const next = new URLSearchParams(searchParams);
+          next.delete("student");
+          setSearchParams(next, { replace: true });
+        }
+      }}>
         <DialogContent className="w-[95vw] max-w-7xl h-[90vh] flex flex-col sm:max-w-7xl sm:w-[95vw] sm:mx-auto">
           <DialogHeader className="flex-shrink-0 pb-4 border-b">
             <DialogTitle className="text-xl">Student Details</DialogTitle>

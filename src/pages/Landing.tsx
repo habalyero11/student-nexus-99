@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate, Link } from "react-router-dom";
-import { GraduationCap, BarChart3, Users, School, ArrowRight, Lock, Hash, Eye, EyeOff } from "lucide-react";
+import { GraduationCap, BarChart3, Users, School, ArrowRight, Lock, Hash, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +21,12 @@ const Landing = () => {
     const [checking, setChecking] = useState(false);
     const [defaultPasswordOpen, setDefaultPasswordOpen] = useState(false);
     const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+    const [studentLoginOpen, setStudentLoginOpen] = useState(false);
     const [loginError, setLoginError] = useState("");
+    const [resetStudentId, setResetStudentId] = useState("");
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetError, setResetError] = useState("");
+    const [resetSuccess, setResetSuccess] = useState(false);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -129,90 +135,240 @@ const Landing = () => {
                     </nav>
 
                     <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-end gap-1">
-                            <div className="flex items-center gap-2 p-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm pr-1.5 pl-4 transition-all hover:bg-white/10 hover:border-white/20 scale-[0.60] origin-right md:scale-100 relative">
-                                <div className="flex items-center gap-3 mr-2">
-                                    <div className="relative group">
-                                        <Hash className={`absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 transition-colors ${loginError ? 'text-red-400' : 'text-white/50 group-hover:text-white/80'}`} />
-                                        <input
-                                            type="text"
-                                            placeholder="ID Number"
-                                            className={`h-8 w-20 md:w-24 pl-5 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0 ${loginError ? 'placeholder:text-red-300/50' : ''}`}
-                                            value={studentId}
-                                            onChange={(e) => {
-                                                setStudentId(e.target.value);
-                                                setLoginError("");
-                                            }}
-                                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleStudentLogin())}
-                                        />
-                                    </div>
-                                    <div className="w-px h-4 bg-white/10" />
-                                    <div className="relative group">
-                                        <Lock className={`absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 transition-colors ${loginError ? 'text-red-400' : 'text-white/50 group-hover:text-white/80'}`} />
-                                        <input
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="Password"
-                                            className={`h-8 w-20 md:w-24 pl-5 pr-6 bg-transparent border-none text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-0 ${loginError ? 'placeholder:text-red-300/50' : ''}`}
-                                            value={password}
-                                            onChange={(e) => {
-                                                setPassword(e.target.value);
-                                                setLoginError("");
-                                            }}
-                                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleStudentLogin())}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="absolute right-0 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
-                                            onClick={() => setShowPassword((s) => !s)}
-                                        >
-                                            {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                                        </button>
-                                    </div>
-                                </div>
-                                <Button
-                                    size="sm"
-                                    onClick={handleStudentLogin}
-                                    disabled={checking}
-                                    className={`rounded-full px-5 h-8 font-medium transition-colors ${loginError ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white text-black hover:bg-white/90'}`}
-                                >
-                                    {checking ? "..." : "Login"}
-                                </Button>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-[10px] md:text-xs">
-                                {loginError && (
-                                    <span className="text-red-400 font-medium animate-pulse">
-                                        {loginError}
-                                    </span>
-                                )}
-                                <button
-                                    onClick={() => setForgotPasswordOpen(true)}
-                                    className="text-white/60 hover:text-white transition-colors hover:underline"
-                                >
-                                    Forgot Password?
-                                </button>
-                            </div>
-                        </div>
+                        {session && (
+                            <Button
+                                onClick={() => navigate("/dashboard")}
+                                className="rounded-full bg-white text-slate-900 hover:bg-white/90"
+                            >
+                                Dashboard
+                            </Button>
+                        )}
 
                         <DefaultPasswordDialog open={defaultPasswordOpen} onOpenChange={setDefaultPasswordOpen} />
 
-                        <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
+                        <Dialog open={forgotPasswordOpen} onOpenChange={(open) => {
+                            setForgotPasswordOpen(open);
+                            if (!open) {
+                                setResetStudentId("");
+                                setResetError("");
+                                setResetSuccess(false);
+                            }
+                        }}>
                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader>
-                                    <DialogTitle>Forgot Password</DialogTitle>
+                                    <DialogTitle>Student Password Reset</DialogTitle>
                                     <DialogDescription>
-                                        Please contact the University Registrar or your Academic Advisor to reset your password.
+                                        Enter your Student ID to request a password reset.
                                     </DialogDescription>
                                 </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
-                                        <p><strong>Note:</strong> Self-service password reset is currently unavailable for student accounts to ensure security.</p>
-                                        <p>Bring your Student ID when visiting the office for verification.</p>
+                                {!resetSuccess ? (
+                                    <form onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        if (!resetStudentId.trim()) {
+                                            setResetError("Please enter your Student ID");
+                                            return;
+                                        }
+                                        setResetLoading(true);
+                                        setResetError("");
+                                        try {
+                                            const { data, error } = await supabase.functions.invoke("request-student-password-reset", {
+                                                body: { student_id_no: resetStudentId.trim() },
+                                            });
+
+                                            if (error) {
+                                                setResetError(error.message || "Request failed");
+                                                setResetLoading(false);
+                                                return;
+                                            }
+                                            if (data?.error) {
+                                                setResetError(data.error);
+                                                setResetLoading(false);
+                                                return;
+                                            }
+                                            setResetSuccess(true);
+                                            toast({
+                                                title: "Request Submitted",
+                                                description: data?.message || "Your advisor and admin have been notified.",
+                                            });
+                                        } catch {
+                                            setResetError("An error occurred. Please try again.");
+                                        } finally {
+                                            setResetLoading(false);
+                                        }
+                                    }} className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="reset-student-id">Student ID</Label>
+                                            <div className="relative">
+                                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    id="reset-student-id"
+                                                    type="text"
+                                                    placeholder="Enter your Student ID"
+                                                    className="pl-10"
+                                                    value={resetStudentId}
+                                                    onChange={(e) => {
+                                                        setResetStudentId(e.target.value);
+                                                        setResetError("");
+                                                    }}
+                                                />
+                                            </div>
+                                            {resetError && (
+                                                <p className="text-sm text-destructive">{resetError}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                                            <p><strong>Note:</strong> After submitting, your advisor and admin will be notified. They will reset your password to the default (1234) after confirming your identity. Visit the office with your Student ID.</p>
+                                        </div>
+
+                                        <Button
+                                            type="submit"
+                                            className="w-full"
+                                            disabled={resetLoading}
+                                        >
+                                            {resetLoading ? "Submitting..." : "Submit Request"}
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="w-full"
+                                            onClick={() => setForgotPasswordOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </form>
+                                ) : (
+                                    <div className="space-y-4 py-4">
+                                        <div className="flex flex-col items-center justify-center py-4">
+                                            <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3">
+                                                <CheckCircle2 className="h-6 w-6 text-green-600" />
+                                            </div>
+                                            <h3 className="font-semibold text-lg">Request Submitted!</h3>
+                                            <p className="text-sm text-center text-muted-foreground mt-2">
+                                                Your advisor and admin have been notified. Please visit the office with your Student ID to complete the password reset.
+                                            </p>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            className="w-full"
+                                            onClick={() => setForgotPasswordOpen(false)}
+                                        >
+                                            Close
+                                        </Button>
                                     </div>
-                                    <Button className="w-full" onClick={() => setForgotPasswordOpen(false)}>
-                                        Understood
+                                )}
+                            </DialogContent>
+                        </Dialog>
+
+                        {/* Student Login Modal */}
+                        <Dialog open={studentLoginOpen} onOpenChange={(open) => {
+                            setStudentLoginOpen(open);
+                            if (!open) {
+                                setStudentId("");
+                                setPassword("");
+                                setShowPassword(false);
+                                setLoginError("");
+                            }
+                        }}>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                            <GraduationCap className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <DialogTitle>Student Access</DialogTitle>
+                                            <DialogDescription>
+                                                Sign in to view your grades and attendance.
+                                            </DialogDescription>
+                                        </div>
+                                    </div>
+                                </DialogHeader>
+
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handleStudentLogin();
+                                    }}
+                                    className="space-y-4 py-2"
+                                >
+                                    <div className="space-y-2">
+                                        <Label htmlFor="student-login-id">Student ID</Label>
+                                        <div className="relative">
+                                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="student-login-id"
+                                                type="text"
+                                                placeholder="e.g. 2024-00123"
+                                                className="pl-10"
+                                                value={studentId}
+                                                onChange={(e) => {
+                                                    setStudentId(e.target.value);
+                                                    setLoginError("");
+                                                }}
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="student-login-password">Password</Label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="student-login-password"
+                                                type={showPassword ? "text" : "password"}
+                                                placeholder="Your password"
+                                                className="pl-10 pr-10"
+                                                value={password}
+                                                onChange={(e) => {
+                                                    setPassword(e.target.value);
+                                                    setLoginError("");
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                                onClick={() => setShowPassword((s) => !s)}
+                                                tabIndex={-1}
+                                            >
+                                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
+                                        </div>
+                                        {loginError && (
+                                            <p className="text-sm text-destructive">{loginError}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center justify-between text-sm">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDefaultPasswordOpen(true)}
+                                            className="text-muted-foreground hover:text-foreground hover:underline"
+                                        >
+                                            First-time login?
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setStudentLoginOpen(false);
+                                                setForgotPasswordOpen(true);
+                                            }}
+                                            className="text-primary hover:underline"
+                                        >
+                                            Forgot password?
+                                        </button>
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        className="w-full h-11"
+                                        disabled={checking}
+                                    >
+                                        {checking ? "Signing in..." : "Sign In"}
                                     </Button>
-                                </div>
+                                </form>
                             </DialogContent>
                         </Dialog>
 
@@ -232,7 +388,12 @@ const Landing = () => {
                         <div className="animate-fade-in-up flex flex-col items-center">
                             <div className="inline-flex items-center rounded-full border border-white/10 px-4 py-1.5 text-xs font-medium text-white backdrop-blur-md bg-white/5 mb-8 shadow-2xl shadow-black/20">
                                 <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 shadow-[0_0_8px_2px_rgba(52,211,153,0.4)] animate-pulse"></span>
-                                System Live: Academic Year 2024-2025
+                                System Live: Academic Year {(() => {
+                                    const now = new Date();
+                                    // Academic year rolls over in August (school year starts ~Aug)
+                                    const startYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+                                    return `${startYear}-${startYear + 1}`;
+                                })()}
                             </div>
 
                             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter text-white mb-6 drop-shadow-2xl">
@@ -255,10 +416,24 @@ const Landing = () => {
                                         Faculty Access
                                     </Button>
                                 )}
+                                {!session && (
+                                    <Button
+                                        size="lg"
+                                        variant="outline"
+                                        className="h-14 px-10 rounded-full text-base font-semibold border-white/30 bg-white/10 text-white hover:bg-white/20 hover:border-white/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1"
+                                        onClick={() => {
+                                            setLoginError("");
+                                            setStudentLoginOpen(true);
+                                        }}
+                                    >
+                                        <GraduationCap className="mr-2 h-5 w-5" />
+                                        Student Access
+                                    </Button>
+                                )}
                                 <Button
                                     size="lg"
-                                    variant="outline"
-                                    className="h-14 px-10 rounded-full text-base font-semibold border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1"
+                                    variant="ghost"
+                                    className="h-14 px-10 rounded-full text-base font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all duration-300 hover:-translate-y-1"
                                     onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
                                 >
                                     Explore Features

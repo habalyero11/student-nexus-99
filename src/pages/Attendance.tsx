@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Search, Filter, Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, CalendarDays, MoreHorizontal, CheckSquare, Trash2 } from "lucide-react";
+import { Calendar, Search, Filter, Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, CalendarDays, MoreHorizontal, CheckSquare, Trash2, Sun, Sunset } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
@@ -25,7 +25,10 @@ type ClassSession = {
   type: 'regular' | 'special' | 'holiday';
   year_level: string;
   section: string;
+  session?: SessionPart;
 };
+
+type SessionPart = 'morning' | 'afternoon';
 
 const Attendance = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -34,6 +37,10 @@ const Attendance = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedSession, setSelectedSession] = useState<SessionPart>(() => {
+    // Default to current session based on local time (morning before 12:00)
+    return new Date().getHours() < 12 ? 'morning' : 'afternoon';
+  });
   const [selectedYearLevel, setSelectedYearLevel] = useState<string>("all");
   const [selectedSection, setSelectedSection] = useState<string>("all");
   const [userRole, setUserRole] = useState<string>("");
@@ -80,7 +87,7 @@ const Attendance = () => {
       fetchStudents();
       fetchAttendance();
     }
-  }, [userRole, selectedDate, selectedYearLevel, selectedSection]);
+  }, [userRole, selectedDate, selectedYearLevel, selectedSection, selectedSession]);
 
   const fetchUserProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -103,7 +110,8 @@ const Attendance = () => {
         .eq('date', selectedDate)
         .eq('year_level', selectedYearLevel)
         .eq('section', selectedSection)
-        .maybeSingle(); // Use maybeSingle to not throw error if not found
+        .eq('session', selectedSession)
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
       setSession(data);
@@ -130,9 +138,10 @@ const Attendance = () => {
           date: selectedDate,
           year_level: selectedYearLevel,
           section: selectedSection,
-          name: newSessionName || (newSessionType === 'regular' ? 'Regular Class' : newSessionType),
+          session: selectedSession,
+          name: newSessionName || (newSessionType === 'regular' ? `Regular Class (${selectedSession})` : newSessionType),
           type: newSessionType
-        })
+        }, { onConflict: 'date,year_level,section,session' })
         .select()
         .single();
 
@@ -219,7 +228,8 @@ const Attendance = () => {
       const { data, error } = await supabase
         .from("attendance")
         .select(`*, students!attendance_student_id_fkey (*)`)
-        .eq("date", selectedDate);
+        .eq("date", selectedDate)
+        .eq("session", selectedSession);
 
       if (error) throw error;
       setAttendance(data || []);
@@ -249,7 +259,8 @@ const Attendance = () => {
           student_id: studentId,
           status,
           remarks: remarks || "",
-          date: selectedDate
+          date: selectedDate,
+          session: selectedSession,
         } as any
       ];
       setAttendance(newAttendance);
@@ -259,10 +270,11 @@ const Attendance = () => {
         .upsert({
           student_id: studentId,
           date: selectedDate,
+          session: selectedSession,
           status,
           remarks: remarks || null,
         }, {
-          onConflict: 'student_id,date'
+          onConflict: 'student_id,date,session'
         });
 
       if (error) throw error;
@@ -286,12 +298,13 @@ const Attendance = () => {
       const updates = filteredStudents.map(s => ({
         student_id: s.id,
         date: selectedDate,
+        session: selectedSession,
         status: status
       }));
 
       const { error } = await supabase
         .from('attendance')
-        .upsert(updates, { onConflict: 'student_id,date' });
+        .upsert(updates, { onConflict: 'student_id,date,session' });
 
       if (error) throw error;
 
@@ -352,17 +365,61 @@ const Attendance = () => {
           <p className="text-muted-foreground">Manage daily class attendance records</p>
         </div>
 
-        {/* Date Picker */}
-        <div className="flex items-center gap-2 bg-card p-2 rounded-lg border shadow-sm">
-          <CalendarDays className="h-5 w-5 text-primary" />
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="border-none shadow-none focus-visible:ring-0 w-[140px] font-medium"
-          />
+        {/* Date + Session Picker */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-card p-2 rounded-lg border shadow-sm">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="border-none shadow-none focus-visible:ring-0 w-[140px] font-medium"
+            />
+            <span className="text-xs text-muted-foreground pr-2 hidden sm:inline">
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short' })}
+            </span>
+          </div>
+
+          {/* Morning / Afternoon toggle */}
+          <div className="flex items-center bg-card p-1 rounded-lg border shadow-sm">
+            <Button
+              type="button"
+              variant={selectedSession === 'morning' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setSelectedSession('morning')}
+              className="gap-1 h-8"
+              title="Morning session"
+            >
+              <Sun className="h-4 w-4" />
+              AM
+            </Button>
+            <Button
+              type="button"
+              variant={selectedSession === 'afternoon' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setSelectedSession('afternoon')}
+              className="gap-1 h-8"
+              title="Afternoon session"
+            >
+              <Sunset className="h-4 w-4" />
+              PM
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Weekend / non-class day hint (Sat/Sun) */}
+      {(() => {
+        const day = new Date(selectedDate + 'T00:00:00').getDay();
+        if (day === 0 || day === 6) {
+          return (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Heads up: classes meet Monday–Friday. {day === 0 ? 'Sunday' : 'Saturday'} is not a regular class day.
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       {/* Main Control Bar */}
       <Card className="shadow-sm border-none bg-card/50">

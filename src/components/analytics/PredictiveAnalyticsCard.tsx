@@ -39,7 +39,7 @@ interface CachedPredictions {
     advisorAssignments: string;
 }
 
-const CACHE_KEY = 'gemini-predictions-cache';
+const CACHE_KEY = 'gemini-predictions-cache-v5';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const REFRESH_BUTTON_THRESHOLD = 0; // Always allow refresh
 
